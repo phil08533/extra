@@ -2,7 +2,7 @@
 
 This repository contains:
 - A complete product SDLC/specification
-- A runnable static prototype implementing estimator, job, and worker flows
+- A runnable static prototype implementing the first working estimator and worker flows
 
 ## Core Product Philosophy
 
@@ -14,11 +14,13 @@ This repository contains:
 
 ## Project Layout
 
-- `index.html` — lightweight redirect entry point for GitHub Pages (`/` → `/app/`)
-- `app/styles.css` — UI styles
-- `app/app.js` — Estimator, saved estimates, dashboard, worker clock, weekly pay logic (localStorage)
 - `docs/SDLC.md` — Full software development life cycle and product specification
+- `index.html` — Lightweight redirect entry point for GitHub Pages (`/` → `/app/`)
+- `app/index.html` — Static app shell
+- `app/styles.css` — UI styles
+- `app/app.js` — Estimator, saved estimates, work dashboard, worker clock, and weekly pay logic (localStorage)
 - `.github/workflows/deploy-pages.yml` — Automatic GitHub Pages deployment workflow
+- `CONTRIBUTING.md` — Conflict resolution and contribution guidance
 
 ## Run the Static App
 
@@ -30,7 +32,7 @@ python3 -m http.server 8000
 
 Then open:
 
-- `http://localhost:8000/`
+- `http://localhost:8000/` (redirects to `/app/`)
 
 ## Deploy to GitHub Pages
 
@@ -51,7 +53,7 @@ If you still see a 404 page, verify:
 - Estimate builder with template-based line items
 - Material auto-calculations from dimensions (mulch, soil, square footage)
 - Estimate agreement text, customer email, and payment link fields
-- Save, load, duplicate, and delete estimates locally
+- Status tracking and local estimate save/load/duplicate/delete flows
 - Work dashboard showing accepted jobs
 - Worker clock interface with large action buttons
 - Local time log history
