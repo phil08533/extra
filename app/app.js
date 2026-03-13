@@ -16,13 +16,11 @@ const templates = {
 };
 
 const state = {
+  dimensions: [],
   estimateItems: [],
   estimates: JSON.parse(localStorage.getItem("estimates") || "[]"),
-  timeLogs: JSON.parse(localStorage.getItem("timeLogs") || "[]"),
-  activeEstimateId: null
+  timeLogs: JSON.parse(localStorage.getItem("timeLogs") || "[]")
 };
-
-const defaultAgreement = "50% deposit required. Balance due upon completion. Work subject to weather delays.";
 
 const byId = (id) => document.getElementById(id);
 const formatMoney = (n) => `$${n.toFixed(2)}`;
@@ -36,29 +34,18 @@ function init() {
     templateSelect.appendChild(option);
   });
 
-  byId("agreementText").value = defaultAgreement;
-
-  byId("addDimensionBtn").addEventListener("click", () => addDimensionRow());
+  byId("addDimensionBtn").addEventListener("click", addDimensionRow);
   byId("saveEstimateBtn").addEventListener("click", saveEstimate);
-  byId("newEstimateBtn").addEventListener("click", resetEstimateForm);
   byId("exportBtn").addEventListener("click", () => window.print());
   templateSelect.addEventListener("change", loadTemplate);
-
   document.querySelectorAll(".worker-controls button").forEach((btn) => {
     btn.addEventListener("click", () => logTime(btn.dataset.action));
   });
 
-  document.querySelectorAll(".day-hours").forEach((input) => {
-    input.addEventListener("input", recalculateWeeklyPay);
-  });
-  byId("hourlyRate").addEventListener("input", recalculateWeeklyPay);
-
   addDimensionRow();
   loadTemplate();
-  renderSavedEstimates();
   renderWorkDashboard();
   renderTimeLogs();
-  recalculateWeeklyPay();
 }
 
 function addDimensionRow(prefill = { length: "", width: "", depth: "" }) {
@@ -73,10 +60,6 @@ function addDimensionRow(prefill = { length: "", width: "", depth: "" }) {
     recalculate();
   });
   byId("dimensionsList").appendChild(clone);
-}
-
-function clearDimensionRows() {
-  byId("dimensionsList").innerHTML = "";
 }
 
 function collectDimensions() {
@@ -161,140 +144,22 @@ function recalculate() {
   byId("grandTotal").textContent = formatMoney(materials + labor + fees);
 }
 
-function snapshotCurrentEstimate() {
-  return {
+function saveEstimate() {
+  const estimate = {
+    id: crypto.randomUUID(),
     customerName: byId("customerName").value || "Unnamed Customer",
     estimateNumber: byId("estimateNumber").value || `EST-${Date.now()}`,
     status: byId("estimateStatus").value,
     template: byId("templateSelect").value,
-    customerEmail: byId("customerEmail").value.trim(),
-    paymentLink: byId("paymentLink").value.trim(),
-    agreement: byId("agreementText").value.trim(),
-    dimensions: collectDimensions(),
-    items: structuredClone(state.estimateItems),
-    total: byId("grandTotal").textContent
+    items: state.estimateItems,
+    total: byId("grandTotal").textContent,
+    createdAt: new Date().toISOString()
   };
-}
 
-function saveEstimate() {
-  const payload = snapshotCurrentEstimate();
-  if (state.activeEstimateId) {
-    const index = state.estimates.findIndex((e) => e.id === state.activeEstimateId);
-    if (index >= 0) {
-      state.estimates[index] = {
-        ...state.estimates[index],
-        ...payload,
-        updatedAt: new Date().toISOString()
-      };
-    }
-  } else {
-    state.estimates.unshift({
-      id: crypto.randomUUID(),
-      ...payload,
-      createdAt: new Date().toISOString()
-    });
-  }
-
+  state.estimates.unshift(estimate);
   localStorage.setItem("estimates", JSON.stringify(state.estimates));
-  renderSavedEstimates();
   renderWorkDashboard();
   alert("Estimate saved locally.");
-}
-
-function renderSavedEstimates() {
-  const list = byId("savedEstimates");
-  list.innerHTML = "";
-
-  if (state.estimates.length === 0) {
-    list.innerHTML = "<li>No saved estimates yet.</li>";
-    return;
-  }
-
-  state.estimates.forEach((estimate) => {
-    const li = document.createElement("li");
-    li.className = "saved-estimate-item";
-    li.innerHTML = `
-      <strong>${estimate.estimateNumber} — ${estimate.customerName}</strong>
-      <span class="meta">${estimate.template} · ${estimate.status} · ${estimate.total}</span>
-      <div class="inline-actions">
-        <button data-action="load">Load</button>
-        <button data-action="duplicate">Duplicate</button>
-        <button class="danger" data-action="delete">Delete</button>
-      </div>
-    `;
-
-    li.querySelector('[data-action="load"]').addEventListener("click", () => loadEstimate(estimate.id));
-    li.querySelector('[data-action="duplicate"]').addEventListener("click", () => duplicateEstimate(estimate.id));
-    li.querySelector('[data-action="delete"]').addEventListener("click", () => deleteEstimate(estimate.id));
-    list.appendChild(li);
-  });
-}
-
-function loadEstimate(id) {
-  const estimate = state.estimates.find((e) => e.id === id);
-  if (!estimate) return;
-
-  state.activeEstimateId = id;
-  byId("customerName").value = estimate.customerName || "";
-  byId("estimateNumber").value = estimate.estimateNumber || "";
-  byId("estimateStatus").value = estimate.status || "Draft";
-  byId("templateSelect").value = estimate.template || Object.keys(templates)[0];
-  byId("customerEmail").value = estimate.customerEmail || "";
-  byId("paymentLink").value = estimate.paymentLink || "";
-  byId("agreementText").value = estimate.agreement || defaultAgreement;
-
-  state.estimateItems = structuredClone(estimate.items || templates[byId("templateSelect").value]);
-  renderLineItems();
-
-  clearDimensionRows();
-  if (estimate.dimensions?.length) {
-    estimate.dimensions.forEach((dimension) => addDimensionRow(dimension));
-  } else {
-    addDimensionRow();
-  }
-
-  recalculate();
-}
-
-function duplicateEstimate(id) {
-  const estimate = state.estimates.find((e) => e.id === id);
-  if (!estimate) return;
-
-  state.estimates.unshift({
-    ...structuredClone(estimate),
-    id: crypto.randomUUID(),
-    estimateNumber: `${estimate.estimateNumber}-COPY`,
-    status: "Draft",
-    createdAt: new Date().toISOString()
-  });
-
-  localStorage.setItem("estimates", JSON.stringify(state.estimates));
-  renderSavedEstimates();
-  renderWorkDashboard();
-}
-
-function deleteEstimate(id) {
-  state.estimates = state.estimates.filter((e) => e.id !== id);
-  if (state.activeEstimateId === id) {
-    resetEstimateForm();
-  }
-  localStorage.setItem("estimates", JSON.stringify(state.estimates));
-  renderSavedEstimates();
-  renderWorkDashboard();
-}
-
-function resetEstimateForm() {
-  state.activeEstimateId = null;
-  byId("customerName").value = "";
-  byId("estimateNumber").value = "";
-  byId("estimateStatus").value = "Draft";
-  byId("customerEmail").value = "";
-  byId("paymentLink").value = "";
-  byId("agreementText").value = defaultAgreement;
-  byId("templateSelect").value = Object.keys(templates)[0];
-  clearDimensionRows();
-  addDimensionRow();
-  loadTemplate();
 }
 
 function renderWorkDashboard() {
@@ -308,8 +173,7 @@ function renderWorkDashboard() {
 
   accepted.forEach((estimate) => {
     const li = document.createElement("li");
-    const payLinkText = estimate.paymentLink ? ` · Pay: ${estimate.paymentLink}` : "";
-    li.textContent = `${estimate.template} – ${estimate.customerName} (${estimate.total})${payLinkText}`;
+    li.textContent = `${estimate.template} – ${estimate.customerName} (${estimate.total})`;
     list.appendChild(li);
   });
 }
@@ -341,17 +205,6 @@ function renderTimeLogs() {
     li.textContent = `${log.at} — ${log.worker} — ${log.job} — ${log.action}`;
     list.appendChild(li);
   });
-}
-
-function recalculateWeeklyPay() {
-  const totalHours = [...document.querySelectorAll(".day-hours")].reduce(
-    (sum, field) => sum + (Number(field.value) || 0),
-    0
-  );
-  const hourlyRate = Number(byId("hourlyRate").value) || 0;
-
-  byId("weeklyHours").textContent = totalHours.toFixed(2);
-  byId("weeklyPay").textContent = formatMoney(totalHours * hourlyRate);
 }
 
 init();

@@ -2,7 +2,7 @@
 
 This repository contains:
 - A complete product SDLC/specification
-- A runnable static prototype implementing estimator, job, and worker flows
+- A runnable static prototype implementing the first working estimator and worker flows
 
 ## Core Product Philosophy
 
@@ -14,10 +14,10 @@ This repository contains:
 
 ## Project Layout
 
-- `index.html` — GitHub Pages front page entry point
-- `app/styles.css` — UI styles
-- `app/app.js` — Estimator, saved estimates, dashboard, worker clock, weekly pay logic (localStorage)
 - `docs/SDLC.md` — Full software development life cycle and product specification
+- `app/index.html` — Static app shell
+- `app/styles.css` — UI styles
+- `app/app.js` — Estimator, work dashboard, and worker clock logic (localStorage)
 
 ## Run the Static App
 
@@ -29,7 +29,7 @@ python3 -m http.server 8000
 
 Then open:
 
-- `http://localhost:8000/`
+- `http://localhost:8000/app/`
 
 ## Current Prototype Capabilities
 
@@ -41,4 +41,8 @@ Then open:
 - Worker clock interface with large action buttons
 - Local time log history
 - Weekly pay tracker (hours + hourly rate)
+- Status tracking and local estimate saving
+- Work dashboard showing accepted jobs
+- Worker clock interface with large action buttons
+- Local time log history
 - Browser print/export flow for estimates
