@@ -41,8 +41,8 @@ Then open:
 - Worker clock interface with large action buttons
 - Local time log history
 - Weekly pay tracker (hours + hourly rate)
-- Status tracking and local estimate saving
-- Work dashboard showing accepted jobs
-- Worker clock interface with large action buttons
-- Local time log history
 - Browser print/export flow for estimates
+
+## Need help merging conflicts?
+
+Use the step-by-step guide in `CONTRIBUTING.md` (rebase flow, ours/theirs shortcuts, and GitHub UI fallback).
