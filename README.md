@@ -14,7 +14,7 @@ This repository contains:
 
 ## Project Layout
 
-- `index.html` — GitHub Pages front page entry point
+- `index.html` — lightweight redirect entry point for GitHub Pages (`/` → `/app/`)
 - `app/styles.css` — UI styles
 - `app/app.js` — Estimator, saved estimates, dashboard, worker clock, weekly pay logic (localStorage)
 - `docs/SDLC.md` — Full software development life cycle and product specification
@@ -34,7 +34,7 @@ Then open:
 
 ## Deploy to GitHub Pages
 
-This repo includes a GitHub Actions workflow that publishes the repository root to GitHub Pages on every push to `main`.
+This repo includes a GitHub Actions workflow that publishes the repository root to GitHub Pages on every push to `main`. The root page redirects to `/app/`, where the actual app UI is maintained.
 
 1. Push this branch to GitHub.
 2. In GitHub: **Settings → Pages → Source**, set source to **GitHub Actions**.
