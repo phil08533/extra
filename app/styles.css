@@ -42,8 +42,7 @@ label {
 
 input,
 select,
-button,
-textarea {
+button {
   padding: 0.55rem;
   border-radius: 8px;
   border: 1px solid #d1d5db;
@@ -89,7 +88,6 @@ button.danger {
 .actions {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .worker-controls {
@@ -105,41 +103,13 @@ button.danger {
   font-weight: 700;
 }
 
-.big.start {
-  background: #16a34a;
-}
-.big.stop {
-  background: #ef4444;
-}
-.big.lunch {
-  background: #f59e0b;
-}
+.big.start { background: #16a34a; }
+.big.stop { background: #ef4444; }
+.big.lunch { background: #f59e0b; }
 
 ul {
   margin: 0;
   padding-left: 1.1rem;
-}
-
-.saved-estimate-item {
-  margin-bottom: 0.75rem;
-}
-
-.saved-estimate-item .meta {
-  display: block;
-  color: #4b5563;
-  font-size: 0.9rem;
-  margin: 0.2rem 0 0.4rem;
-}
-
-.inline-actions {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.inline-actions button {
-  font-size: 0.85rem;
-  padding: 0.4rem 0.55rem;
 }
 
 @media (max-width: 720px) {
