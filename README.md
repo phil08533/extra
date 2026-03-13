@@ -35,6 +35,12 @@ Then open:
 
 - Estimate builder with template-based line items
 - Material auto-calculations from dimensions (mulch, soil, square footage)
+- Estimate agreement text, customer email, and payment link fields
+- Save, load, duplicate, and delete estimates locally
+- Work dashboard showing accepted jobs
+- Worker clock interface with large action buttons
+- Local time log history
+- Weekly pay tracker (hours + hourly rate)
 - Status tracking and local estimate saving
 - Work dashboard showing accepted jobs
 - Worker clock interface with large action buttons
