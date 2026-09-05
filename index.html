@@ -3,93 +3,84 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Turn a book into a background reading soundtrack.">
-  <title>ReadSound — Your book, scored</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="ReadSound creates a reading soundtrack from a book's themes.">
+  <title>ReadSound — Your book. Your soundtrack.</title>
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="#top" aria-label="ReadSound home">Read<span>Sound</span></a>
-    <span class="tagline">Your book, scored.</span>
-  </header>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="./">ReadSound</a>
+      <span class="badge">BOOK → MUSIC</span>
+    </header>
 
-  <main id="top">
     <section class="hero">
       <div>
-        <p class="eyebrow">READING + MUSIC</p>
-        <h1>Find the soundtrack hiding inside your book.</h1>
-        <p class="hero-copy">Pick a book and ReadSound turns its subjects, themes, and metadata into a music discovery session.</p>
+        <p class="eyebrow">A soundtrack for the story</p>
+        <h1>Find music that<br><em>belongs</em> with your book.</h1>
+        <p class="lede">Search Open Library, pull the book's themes, and turn them into a hand-built reading soundtrack.</p>
       </div>
-      <form id="searchForm" class="search" autocomplete="off">
-        <label for="bookQuery">Find a book</label>
+      <div class="hero-note">
+        <span>NO ACCOUNT</span>
+        <span>NO BACKEND</span>
+        <span>BUILT FOR THE BROWSER</span>
+      </div>
+    </section>
+
+    <section class="search-card">
+      <form id="search-form" autocomplete="off">
+        <label for="book-search">Search for a book</label>
         <div class="search-row">
-          <input id="bookQuery" name="bookQuery" required minlength="2" placeholder="Try The Hobbit, Dune, or Jane Eyre" />
-          <button type="submit">Search</button>
+          <input id="book-search" name="q" type="search" placeholder="The Hobbit, Dune, Jane Eyre…" required>
+          <button type="submit">Find book <span>↗</span></button>
         </div>
       </form>
+      <div id="status" class="status" aria-live="polite"></div>
     </section>
 
-    <section id="resultsSection" class="results-section hidden" aria-live="polite">
-      <div class="section-heading">
+    <section id="results" class="results" hidden>
+      <div class="section-head">
         <div>
-          <p class="eyebrow">BOOKS</p>
-          <h2>Choose your starting point</h2>
+          <p class="eyebrow">Choose your edition</p>
+          <h2>Books</h2>
         </div>
-        <span id="resultCount" class="muted"></span>
+        <span id="result-count" class="muted"></span>
       </div>
-      <div id="bookResults" class="book-grid"></div>
+      <div id="book-grid" class="book-grid"></div>
     </section>
 
-    <section id="workspace" class="workspace hidden" aria-live="polite">
-      <aside class="book-card">
-        <div class="cover-wrap">
-          <img id="bookCover" alt="" class="cover">
+    <section id="soundtrack" class="soundtrack" hidden>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Your reading soundtrack</p>
+          <h2 id="selected-title">—</h2>
+          <p id="selected-meta" class="muted"></p>
         </div>
-        <p class="eyebrow">NOW READING</p>
-        <h2 id="bookTitle"></h2>
-        <p id="bookAuthor" class="author"></p>
-        <p id="bookDescription" class="description"></p>
-        <div id="subjectTags" class="tags"></div>
-        <button id="rebuildButton" class="secondary" type="button">Rebuild soundtrack</button>
-      </aside>
+        <button id="rebuild" class="ghost" type="button">Rebuild soundtrack ↻</button>
+      </div>
 
-      <section class="player-panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">SOUNDTRACK</p>
-            <h2 id="playlistTitle">Loading your score…</h2>
-          </div>
-          <button id="shuffleButton" class="icon-button" type="button" title="Shuffle playlist" aria-label="Shuffle playlist">↻</button>
+      <div class="mood-strip" id="mood-strip"></div>
+
+      <div class="player">
+        <div class="now-art" id="now-art">♪</div>
+        <div class="now-info">
+          <span class="now-label">NOW PREVIEWING</span>
+          <strong id="now-track">Choose a track</strong>
+          <span id="now-artist">30-second sample</span>
         </div>
-        <p id="matchExplanation" class="match-explanation"></p>
-
-        <div id="player" class="player hidden">
-          <div class="now-playing">
-            <img id="trackArtwork" alt="" />
-            <div>
-              <p class="eyebrow">NOW PLAYING</p>
-              <h3 id="trackName"></h3>
-              <p id="trackArtist" class="muted"></p>
-            </div>
-          </div>
-          <audio id="audio" controls preload="none"></audio>
-          <div class="player-actions">
-            <button id="prevButton" class="secondary" type="button">← Prev</button>
-            <button id="nextButton" type="button">Next →</button>
-          </div>
+        <div class="player-controls">
+          <button id="prev" class="icon-btn" aria-label="Previous track">‹</button>
+          <button id="play" class="play-btn" aria-label="Play preview">▶</button>
+          <button id="next" class="icon-btn" aria-label="Next track">›</button>
         </div>
+      </div>
 
-        <div id="playlist" class="playlist"></div>
-        <div id="loading" class="loading hidden"><span class="spinner"></span> Building your reading soundtrack…</div>
-        <div id="error" class="error hidden" role="alert"></div>
-      </section>
+      <div id="tracks" class="tracks"></div>
+      <audio id="audio" preload="none"></audio>
+      <p class="attribution">Music discovery and previews provided by iTunes Search. Book data and covers provided by Open Library.</p>
     </section>
   </main>
-
-  <footer>
-    <p>ReadSound uses Open Library for books and Apple's iTunes Search API for music previews.</p>
-  </footer>
-
-  <script src="app.js" defer></script>
+  <footer class="footer">ReadSound is a client-side GitHub Pages experiment. Book and music services have their own usage rules.</footer>
+  <script src="./app.js" defer></script>
 </body>
 </html>

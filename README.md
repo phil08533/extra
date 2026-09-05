@@ -1,64 +1,34 @@
 # ReadSound
 
-ReadSound turns a book into a background reading soundtrack. Search Open Library for a book, derive lightweight themes from its metadata, then search the iTunes Search API for matching music previews.
+ReadSound is a static GitHub Pages app that turns a book into a reading soundtrack.
 
-## What this version does
+## What it does
 
-- Search Open Library by title, author, or subject.
-- Display book cover, title, author, subjects, and description.
-- Build a soundtrack from book metadata without an AI service.
-- Query iTunes for multiple genre/theme searches and de-duplicate tracks.
-- Play 30-second previews in-browser with previous/next controls.
-- Shuffle and rebuild the soundtrack.
-- Keep the current book and playlist in localStorage.
-- Responsive, dependency-free frontend that can run as a static GitHub Pages site.
+1. Searches Open Library for a book.
+2. Uses the book's subjects and title to infer a small set of music genres.
+3. Searches the iTunes Search API for tracks and 30-second previews.
+4. Scores tracks locally and builds a soundtrack in the browser.
+5. Lets you preview, skip, shuffle by rebuilding, and continue reading without an account.
 
-## APIs
-
-### Open Library
-Used for book discovery and metadata.
-
-`https://openlibrary.org/search.json`
-
-### iTunes Search API
-Used for music discovery and preview URLs.
-
-`https://itunes.apple.com/search`
-
-The application uses preview audio only. It does not download or re-host music.
-
-## Run locally
-
-From the repository root:
-
-```bash
-python3 -m http.server 8000
-```
-
-Open `http://localhost:8000/`.
+The app is intentionally dependency-free: `index.html`, `styles.css`, and `app.js` are all that GitHub Pages needs.
 
 ## GitHub Pages
 
-The app has no build step. Publish the repository root with GitHub Pages, or use any static web host.
+Set GitHub Pages to deploy from the `main` branch and the repository root (`/`). There is no build step and no server-side code.
 
-## Project structure
+## APIs
 
-```text
-.
-├── index.html
-├── styles.css
-├── app.js
-└── README.md
-```
+ReadSound uses the Open Library Search API for book data and the iTunes Search API for music discovery/previews. The browser calls both services directly, so API keys are not stored in this repository.
 
-## Design direction
+Open Library asks applications making regular frequent requests to identify themselves and to cache where possible. This project keeps searches user-driven and only fetches a small number of results. See the Open Library API guidance before scaling the app. citeturn438356search0turn438356search1
 
-The first release deliberately avoids accounts, databases, paid services, and AI. The interesting part is the matching algorithm: book metadata becomes a set of music-search signals, and the app ranks a mixed playlist from those signals.
+Apple documents the iTunes Search API as a web search service and exposes 30-second preview URLs for tracks. Apple also notes a roughly 20-calls-per-minute limit for the Search API, so the UI intentionally keeps music requests bounded. Preview usage is subject to Apple's promotional-content terms. citeturn938565search0turn938565search1turn938565search2
 
-## Next ideas
+## Roadmap
 
-- Track reading progress and vary soundtrack intensity by chapter.
-- Add ambient-only, instrumental-only, and vocal-heavy modes.
-- Let users save named reading sessions locally.
-- Add more open music sources where licensing permits actual streaming.
-- Improve theme scoring using more books and music metadata.
+- Chapter-aware soundtrack progression
+- Reading timer / session mode
+- Better genre and mood scoring
+- Optional MusicBrainz/Last.fm enrichment
+- Saved local bookshelves and playlists
+- PWA/offline shell

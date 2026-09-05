@@ -1,249 +1,96 @@
-const OPEN_LIBRARY = 'https://openlibrary.org/search.json';
-const ITUNES = 'https://itunes.apple.com/search';
-const COVER_FALLBACK = 'https://openlibrary.org/images/icons/avatar_book-sm.png';
-
-const $ = (id) => document.getElementById(id);
-const state = { books: [], book: null, tracks: [], index: 0 };
-
-const STOP_WORDS = new Set(['the','and','for','with','from','that','this','into','book','books','novel','fiction','story','stories','edition','volume','a','an','of','to','in','on','by','is','as','at','or','be','it','its','his','her','their','one']);
-
-const THEME_MAP = {
-  fantasy: ['fantasy','magic','wizards','dragons','mythology','fairy tales','folklore'],
-  adventure: ['adventure','exploration','travel','journey','quest','pirates'],
-  mystery: ['mystery','detective','crime','suspense','investigation','thriller'],
-  romance: ['romance','love','relationships','dating'],
-  horror: ['horror','ghosts','supernatural','vampires','monsters','occult'],
-  history: ['history','historical','war','civilization','biography','politics'],
-  science: ['science','technology','space','physics','astronomy','medicine'],
-  nature: ['nature','animals','environment','ecology','gardening'],
-  philosophy: ['philosophy','ethics','psychology','religion','spirituality'],
-  fiction: ['fiction','literary','contemporary','classic'],
-  kids: ['juvenile','children','childrens','young adult','juvenile fiction']
+const els = {
+  form: document.querySelector('#search-form'), input: document.querySelector('#book-search'), status: document.querySelector('#status'),
+  results: document.querySelector('#results'), grid: document.querySelector('#book-grid'), count: document.querySelector('#result-count'),
+  soundtrack: document.querySelector('#soundtrack'), title: document.querySelector('#selected-title'), meta: document.querySelector('#selected-meta'),
+  moods: document.querySelector('#mood-strip'), tracks: document.querySelector('#tracks'), rebuild: document.querySelector('#rebuild'),
+  audio: document.querySelector('#audio'), play: document.querySelector('#play'), prev: document.querySelector('#prev'), next: document.querySelector('#next'),
+  art: document.querySelector('#now-art'), nowTrack: document.querySelector('#now-track'), nowArtist: document.querySelector('#now-artist')
 };
 
-const MUSIC_TERMS = {
-  fantasy: ['fantasy instrumental','celtic instrumental','cinematic orchestral'],
-  adventure: ['adventure instrumental','cinematic instrumental','world music'],
-  mystery: ['dark ambient','mystery instrumental','noir jazz'],
-  romance: ['romantic piano','love songs','acoustic love'],
-  horror: ['dark ambient','horror soundtrack','gothic instrumental'],
-  history: ['folk instrumental','classical strings','period music'],
-  science: ['electronic ambient','space ambient','minimal electronic'],
-  nature: ['nature ambient','acoustic instrumental','forest ambient'],
-  philosophy: ['ambient piano','post classical','meditative ambient'],
-  fiction: ['indie folk','alternative instrumental','literary soundtrack'],
-  kids: ['children instrumental','family soundtrack','playful instrumental']
+const state = { book: null, tracks: [], current: -1, musicCache: new Map(), bookCache: new Map() };
+const THEME_TO_GENRES = {
+  fantasy:['soundtrack','classical','world','folk','new age'], adventure:['soundtrack','alternative','rock','electronic'], mystery:['ambient','electronic','jazz','classical'], thriller:['electronic','ambient','alternative','soundtrack'], horror:['soundtrack','metal','ambient','electronic'], romance:['singer/songwriter','pop','jazz','classical'], love:['pop','singer/songwriter','jazz'], war:['soundtrack','classical','alternative','rock'], history:['classical','folk','world','soundtrack'], historical:['classical','folk','world','soundtrack'], mythology:['world','folk','soundtrack','classical'], magic:['new age','soundtrack','electronic','classical'], science:['electronic','ambient','classical'], science_fiction:['electronic','ambient','soundtrack','alternative'], dystopia:['electronic','alternative','ambient','rock'], nature:['new age','folk','ambient','world'], travel:['world','folk','alternative','electronic'], survival:['rock','ambient','soundtrack','alternative'], coming_of_age:['alternative','indie rock','pop','singer/songwriter'], friendship:['indie rock','pop','alternative'], family:['singer/songwriter','pop','classical'], philosophy:['ambient','classical','jazz'], religion:['world','classical','ambient'], politics:['alternative','rock','folk','classical'], crime:['jazz','electronic','soundtrack','hip-hop/rap'], detective:['jazz','soundtrack','ambient'], school:['pop','alternative','indie rock'], humor:['pop','alternative','jazz'], comedy:['pop','jazz','alternative'], literary:['classical','jazz','ambient','singer/songwriter'], poetry:['ambient','classical','jazz','singer/songwriter']
 };
+const FALLBACK_GENRES=['ambient','classical','soundtrack','indie rock'];
 
-function setLoading(show) {
-  $('loading').classList.toggle('hidden', !show);
-}
-function showError(message) {
-  $('error').textContent = message;
-  $('error').classList.remove('hidden');
-}
-function clearError() { $('error').classList.add('hidden'); }
-function escapeText(value='') { return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
-function coverUrl(coverId, size='M') { return coverId ? `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg` : COVER_FALLBACK; }
+function setStatus(msg='',error=false){els.status.textContent=msg;els.status.classList.toggle('error',error)}
+function esc(s=''){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function coverUrl(id){return id?`https://covers.openlibrary.org/b/id/${id}-M.jpg`:''}
 
-function normalizeBook(doc) {
-  return {
-    key: doc.key || `${doc.title}-${(doc.author_name || []).join(',')}`,
-    title: doc.title || 'Untitled',
-    author: (doc.author_name || ['Unknown author'])[0],
-    authors: doc.author_name || [],
-    coverId: doc.cover_i || null,
-    subjects: (doc.subject || []).slice(0, 18),
-    firstPublishYear: doc.first_publish_year || '',
-    editionCount: doc.edition_count || 0
-  };
+async function openLibrarySearch(q){
+  const key=q.trim().toLowerCase();if(state.bookCache.has(key))return state.bookCache.get(key);
+  const url=`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&fields=key,title,author_name,first_publish_year,cover_i,subject,subject_key&limit=8`;
+  const res=await fetch(url,{headers:{Accept:'application/json'}});if(!res.ok)throw new Error('Open Library search failed.');
+  const data=await res.json();const docs=(data.docs||[]).filter(x=>x.title);state.bookCache.set(key,docs);return docs;
 }
 
-async function searchBooks(query) {
-  const url = `${OPEN_LIBRARY}?q=${encodeURIComponent(query)}&fields=key,title,author_name,cover_i,subject,first_publish_year,edition_count&limit=12`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Open Library search failed.');
-  const data = await response.json();
-  return (data.docs || []).map(normalizeBook).filter(book => book.title);
+function renderBooks(books){
+  els.grid.innerHTML='';els.count.textContent=`${books.length} found`;els.results.hidden=false;
+  books.forEach(book=>{const card=document.createElement('article');card.className='book';const btn=document.createElement('button');btn.type='button';
+    const cover=coverUrl(book.cover_i);btn.innerHTML=`<div class="cover">${cover?`<img loading="lazy" src="${cover}" alt="Cover of ${esc(book.title)}">`:`<div class="cover-fallback">${esc(book.title.slice(0,28))}</div>`}</div><div class="book-info"><div class="book-title">${esc(book.title)}</div><div class="book-author">${esc((book.author_name||[]).slice(0,2).join(', '))}</div><div class="book-year">${book.first_publish_year||'Unknown year'}</div></div>`;
+    btn.addEventListener('click',()=>selectBook(book));card.appendChild(btn);els.grid.appendChild(card);
+  });
 }
 
-function renderBookResults(books) {
-  $('bookResults').innerHTML = books.map((book, i) => `
-    <button class="book-result" type="button" data-index="${i}">
-      <img loading="lazy" src="${coverUrl(book.coverId)}" alt="Cover of ${escapeText(book.title)}" onerror="this.src='${COVER_FALLBACK}'">
-      <strong>${escapeText(book.title)}</strong>
-      <span>${escapeText(book.author)}${book.firstPublishYear ? ` · ${book.firstPublishYear}` : ''}</span>
-    </button>
-  `).join('');
-  document.querySelectorAll('.book-result').forEach(btn => btn.addEventListener('click', () => chooseBook(Number(btn.dataset.index))));
+function bookThemes(book){
+  const raw=[...(book.subject_key||[]),...(book.subject||[])].map(x=>String(x).toLowerCase().replace(/[^a-z0-9_ ]/g,'_'));
+  return [...new Set(raw.map(x=>x.replace(/\s+/g,'_')).filter(Boolean))].slice(0,18);
 }
 
-function uniqueTerms(book) {
-  const raw = [book.title, book.author, ...book.subjects]
-    .flatMap(v => String(v).toLowerCase().split(/[^a-z0-9]+/g))
-    .filter(v => v.length > 3 && !STOP_WORDS.has(v));
-
-  const themes = [];
-  for (const [theme, words] of Object.entries(THEME_MAP)) {
-    if (words.some(word => raw.join(' ').includes(word)) || raw.includes(theme)) themes.push(theme);
-  }
-  return { keywords: [...new Set(raw)].slice(0, 16), themes: themes.length ? themes : ['fiction'] };
+function chooseGenres(themes,book){
+  const scores=new Map();
+  themes.forEach(theme=>{
+    Object.entries(THEME_TO_GENRES).forEach(([needle,genres])=>{
+      if(theme.includes(needle)) genres.forEach((g,idx)=>scores.set(g,(scores.get(g)||0)+(5-idx)));
+    });
+  });
+  const text=`${book.title} ${(book.author_name||[]).join(' ')}`.toLowerCase();
+  if(/lord|hobbit|tolkien|dragon|wizard/.test(text))['folk','soundtrack','classical'].forEach(g=>scores.set(g,(scores.get(g)||0)+6));
+  if(/dune|foundation|mars|robot|galaxy|space/.test(text))['electronic','ambient','soundtrack'].forEach(g=>scores.set(g,(scores.get(g)||0)+6));
+  const ranked=[...scores.entries()].sort((a,b)=>b[1]-a[1]).map(([g])=>g);return [...new Set([...ranked,...FALLBACK_GENRES])].slice(0,5);
 }
 
-async function fetchItunes(term) {
-  const url = `${ITUNES}?term=${encodeURIComponent(term)}&media=music&entity=song&attribute=songTerm&limit=12&country=US`;
-  const response = await fetch(url);
-  if (!response.ok) return [];
-  const data = await response.json();
-  return data.results || [];
+async function iTunesSearch(term){
+  const key=term.toLowerCase();if(state.musicCache.has(key))return state.musicCache.get(key);
+  const params=new URLSearchParams({term,media:'music',entity:'song',country:'US',limit:'20',explicit:'No'});
+  const res=await fetch(`https://itunes.apple.com/search?${params.toString()}`);if(!res.ok)throw new Error('Music search failed.');
+  const data=await res.json();const tracks=(data.results||[]).filter(t=>t.previewUrl&&t.trackName&&t.artistName);state.musicCache.set(key,tracks);return tracks;
 }
 
-function scoreTrack(track, term, themes) {
-  const haystack = `${track.trackName} ${track.artistName} ${track.collectionName} ${track.primaryGenreName || ''}`.toLowerCase();
-  let score = 0;
-  for (const word of term.split(/\s+/)) if (word.length > 3 && haystack.includes(word)) score += 2;
-  for (const theme of themes) if (haystack.includes(theme)) score += 3;
-  if (track.previewUrl) score += 1;
-  return score;
+function scoreTrack(track,themes,genres){
+  const hay=`${track.trackName} ${track.artistName} ${track.collectionName} ${track.primaryGenreName}`.toLowerCase();let score=0;
+  themes.forEach(t=>t.replace(/_/g,' ').split(' ').filter(x=>x.length>3).forEach(p=>{if(hay.includes(p))score+=2}));
+  const pg=(track.primaryGenreName||'').toLowerCase();genres.forEach((g,i)=>{if(pg.includes(g)||g.includes(pg))score+=Math.max(1,5-i)});
+  if(/instrumental|ambient|soundtrack|classical|folk/.test(pg))score+=1;return score;
 }
 
-async function buildSoundtrack(book) {
-  const { keywords, themes } = uniqueTerms(book);
-  $('playlistTitle').textContent = `${book.title} — original reading score`;
-  $('matchExplanation').textContent = `Built from ${themes.map(t => t.replace(/^./, c => c.toUpperCase())).join(', ')} and book metadata. No AI required.`;
-
-  const terms = [];
-  themes.forEach(theme => terms.push(...(MUSIC_TERMS[theme] || [])));
-  keywords.slice(0, 3).forEach(word => terms.push(word));
-  const uniqueSearches = [...new Set(terms)].slice(0, 8);
-
-  const responses = await Promise.all(uniqueSearches.map(async term => ({ term, results: await fetchItunes(term) })));
-  const byId = new Map();
-  for (const { term, results } of responses) {
-    for (const track of results) {
-      if (!track.previewUrl || !track.trackId) continue;
-      const score = scoreTrack(track, term, themes);
-      const existing = byId.get(track.trackId);
-      if (!existing || score > existing.score) byId.set(track.trackId, { track, score, term });
-    }
-  }
-
-  const tracks = [...byId.values()]
-    .sort((a,b) => b.score - a.score)
-    .slice(0, 18)
-    .map(x => x.track);
-
-  if (!tracks.length) throw new Error('No playable music previews were found. Try another book or rebuild the soundtrack.');
-  return tracks;
+async function buildSoundtrack(book){
+  setStatus('Building your soundtrack…');const themes=bookThemes(book);const genres=chooseGenres(themes,book);
+  // Keep the client-side request budget small: five bounded iTunes searches per book.
+  const queries=[book.title,...genres.slice(0,4)];const buckets=await Promise.all(queries.map(q=>iTunesSearch(q).catch(()=>[])));
+  const unique=new Map();buckets.flat().forEach(t=>{if(!unique.has(t.trackId))unique.set(t.trackId,t)});
+  let tracks=[...unique.values()].map(t=>({...t,score:scoreTrack(t,themes,genres)})).sort((a,b)=>b.score-a.score).slice(0,14);
+  if(!tracks.length)throw new Error('No music previews came back. Try another book.');
+  state.book=book;state.tracks=tracks;state.current=-1;
+  els.title.textContent=book.title;els.meta.textContent=`${(book.author_name||[]).slice(0,2).join(', ')||'Unknown author'} · ${book.first_publish_year||'year unknown'}`;
+  els.moods.innerHTML=(themes.length?themes.slice(0,8):['story']).map(t=>`<span class="mood">${esc(t.replace(/_/g,' '))}</span>`).join('');renderTracks();els.soundtrack.hidden=false;els.soundtrack.scrollIntoView({behavior:'smooth',block:'start'});setStatus('');
 }
 
-function renderWorkspace(book) {
-  $('bookCover').src = coverUrl(book.coverId, 'L');
-  $('bookCover').alt = `Cover of ${book.title}`;
-  $('bookCover').onerror = () => $('bookCover').src = COVER_FALLBACK;
-  $('bookTitle').textContent = book.title;
-  $('bookAuthor').textContent = `by ${book.author}`;
-  $('bookDescription').textContent = 'The soundtrack engine uses the book’s title, author, subjects, and publication metadata to choose musical directions.';
-  const tags = [...new Set(book.subjects)].slice(0, 9);
-  $('subjectTags').innerHTML = tags.length ? tags.map(s => `<span class="tag">${escapeText(s)}</span>`).join('') : '<span class="tag">fiction</span>';
-  $('workspace').classList.remove('hidden');
-  $('resultsSection').classList.add('hidden');
-  window.scrollTo({top: $('workspace').offsetTop - 20, behavior:'smooth'});
+function renderTracks(){
+  els.tracks.innerHTML=state.tracks.map((t,i)=>`<div class="track ${i===state.current?'playing':''}" data-i="${i}"><div class="track-num">${String(i+1).padStart(2,'0')}</div><div class="track-copy"><div class="track-title">${esc(t.trackName)}</div><div class="track-artist">${esc(t.artistName)} · ${esc(t.primaryGenreName||'music')}</div></div><button class="track-play" type="button">Preview</button></div>`).join('');
+  els.tracks.querySelectorAll('.track').forEach(row=>row.querySelector('button').addEventListener('click',()=>playIndex(Number(row.dataset.i))));
 }
-
-function renderPlaylist() {
-  $('playlist').innerHTML = state.tracks.map((track, i) => `
-    <button class="track ${i === state.index ? 'active' : ''}" type="button" data-index="${i}">
-      <span class="number">${String(i+1).padStart(2,'0')}</span>
-      <img loading="lazy" src="${escapeText(track.artworkUrl100 || COVER_FALLBACK)}" alt="">
-      <span><strong>${escapeText(track.trackName || 'Untitled')}</strong><span>${escapeText(track.artistName || '')}</span></span>
-    </button>
-  `).join('');
-  document.querySelectorAll('.track').forEach(btn => btn.addEventListener('click', () => selectTrack(Number(btn.dataset.index), true)));
+function updatePlayer(){
+  const t=state.tracks[state.current];if(!t){els.nowTrack.textContent='Choose a track';els.nowArtist.textContent='30-second sample';els.art.textContent='♪';return}
+  els.nowTrack.textContent=t.trackName;els.nowArtist.textContent=t.artistName;els.art.innerHTML=t.artworkUrl100?`<img src="${t.artworkUrl100}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`:'♪';renderTracks();
 }
+function playIndex(i){const t=state.tracks[i];if(!t)return;state.current=i;els.audio.src=t.previewUrl;els.audio.play().catch(()=>{});els.play.textContent='❚❚';updatePlayer()}
+function pause(){els.audio.pause();els.play.textContent='▶'}
+function nextTrack(){if(state.tracks.length)playIndex((state.current+1)%state.tracks.length)}
+function selectBook(book){buildSoundtrack(book).catch(err=>setStatus(err.message||'Could not build soundtrack.',true))}
 
-function selectTrack(index, autoplay=false) {
-  if (!state.tracks.length) return;
-  state.index = (index + state.tracks.length) % state.tracks.length;
-  const track = state.tracks[state.index];
-  $('trackName').textContent = track.trackName || 'Untitled';
-  $('trackArtist').textContent = track.artistName || '';
-  $('trackArtwork').src = track.artworkUrl100 || COVER_FALLBACK;
-  $('trackArtwork').alt = `${track.trackName || 'Track'} artwork`;
-  $('audio').src = track.previewUrl;
-  $('player').classList.remove('hidden');
-  document.querySelectorAll('.track').forEach((el, i) => el.classList.toggle('active', i === state.index));
-  localStorage.setItem('readsound-session', JSON.stringify({book: state.book, tracks: state.tracks, index: state.index}));
-  if (autoplay) $('audio').play().catch(() => {});
-}
-
-async function chooseBook(index) {
-  state.book = state.books[index];
-  renderWorkspace(state.book);
-  clearError();
-  setLoading(true);
-  try {
-    state.tracks = await buildSoundtrack(state.book);
-    state.index = 0;
-    renderPlaylist();
-    selectTrack(0, false);
-  } catch (error) {
-    showError(error.message || 'Something went wrong while building the soundtrack.');
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function rebuild() {
-  if (!state.book) return;
-  clearError();
-  setLoading(true);
-  $('playlist').innerHTML = '';
-  try {
-    state.tracks = await buildSoundtrack(state.book);
-    state.index = Math.floor(Math.random() * state.tracks.length);
-    renderPlaylist();
-    selectTrack(state.index, false);
-  } catch (error) {
-    showError(error.message || 'Could not rebuild the soundtrack.');
-  } finally { setLoading(false); }
-}
-
-$('searchForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  clearError();
-  const query = $('bookQuery').value.trim();
-  if (!query) return;
-  $('resultsSection').classList.add('hidden');
-  setLoading(true);
-  $('loading').classList.remove('hidden');
-  try {
-    state.books = await searchBooks(query);
-    if (!state.books.length) throw new Error('No books found. Try a different title or author.');
-    $('resultCount').textContent = `${state.books.length} matches`;
-    renderBookResults(state.books);
-    $('resultsSection').classList.remove('hidden');
-    window.scrollTo({top: $('resultsSection').offsetTop - 20, behavior:'smooth'});
-  } catch (error) { showError(error.message || 'Book search failed.'); $('resultsSection').classList.remove('hidden'); }
-  finally { setLoading(false); }
-});
-
-$('prevButton').addEventListener('click', () => selectTrack(state.index - 1, true));
-$('nextButton').addEventListener('click', () => selectTrack(state.index + 1, true));
-$('shuffleButton').addEventListener('click', () => {
-  state.tracks.sort(() => Math.random() - 0.5);
-  state.index = 0;
-  renderPlaylist();
-  selectTrack(0, false);
-});
-$('rebuildButton').addEventListener('click', rebuild);
-$('audio').addEventListener('ended', () => selectTrack(state.index + 1, true));
-
-(function restoreSession(){
-  try {
-    const saved = JSON.parse(localStorage.getItem('readsound-session') || 'null');
-    if (!saved?.book || !Array.isArray(saved.tracks) || !saved.tracks.length) return;
-    state.book = saved.book; state.tracks = saved.tracks; state.index = saved.index || 0;
-    renderWorkspace(state.book); renderPlaylist(); selectTrack(state.index, false);
-  } catch (_) {}
-})();
+els.audio.addEventListener('ended',nextTrack);els.play.addEventListener('click',()=>{if(!state.tracks.length)return;if(els.audio.paused)playIndex(state.current>=0?state.current:0);else pause()});
+els.next.addEventListener('click',nextTrack);els.prev.addEventListener('click',()=>{if(state.tracks.length)playIndex((state.current-1+state.tracks.length)%state.tracks.length)});
+els.form.addEventListener('submit',async e=>{e.preventDefault();const q=els.input.value.trim();if(!q)return;setStatus('Searching Open Library…');els.results.hidden=true;els.soundtrack.hidden=true;try{const books=await openLibrarySearch(q);if(!books.length)throw new Error('No books found.');renderBooks(books);setStatus('')}catch(err){setStatus(err.message||'Something went wrong.',true)}});
+els.rebuild.addEventListener('click',()=>state.book&&buildSoundtrack(state.book).catch(err=>setStatus(err.message||'Could not rebuild soundtrack.',true)));
+if(location.hash.length>1)els.input.value=decodeURIComponent(location.hash.slice(1)).replace(/\+/g,' ');
