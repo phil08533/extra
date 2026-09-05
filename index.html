@@ -38,7 +38,6 @@
   <dialog id="spotify-settings" class="modal"><form method="dialog" class="modal-card"><button class="modal-close" value="cancel" aria-label="Close">×</button><p class="eyebrow">Spotify connection</p><h2 id="spotify-user-heading">Spotify connected.</h2><p class="modal-copy">Your connection is stored only in this browser. Disconnect here to remove the local token and Client ID.</p><div class="modal-buttons"><button class="ghost" value="cancel">Keep connected</button><button class="danger" id="spotify-disconnect" value="default" type="submit">Disconnect</button></div></form></dialog>
 
   <script>
-    // Guard against older cached HTML that predates the Spotify export button.
     if (!document.getElementById('spotify-export')) {
       const actions = document.querySelector('.soundtrack-actions');
       if (actions) {
@@ -48,8 +47,6 @@
         actions.appendChild(button);
       }
     }
-    // Spotify moved playlist creation from /users/{id}/playlists to /me/playlists.
-    // Keep the older app.js compatible while the browser fetch layer is updated.
     window.addEventListener('DOMContentLoaded', () => {
       const nativeFetch = window.fetch.bind(window);
       window.fetch = (input, init = {}) => {
@@ -63,5 +60,6 @@
     });
   </script>
   <script src="./app.js?v=20260905c" defer></script>
+  <script src="./fix.js?v=20260905e" defer></script>
 </body>
 </html>
