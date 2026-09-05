@@ -6,7 +6,7 @@
   <meta name="description" content="ReadSound creates a reading soundtrack from a book's themes and sends it to Spotify.">
   <meta name="theme-color" content="#173b2f">
   <title>ReadSound — Your book. Your soundtrack.</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260905b">
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -142,6 +142,21 @@
     </form>
   </dialog>
 
-  <script src="./app.js" defer></script>
+  <script>
+    // Compatibility guard for older cached HTML deployments: app.js expects this element.
+    if (!document.getElementById('spotify-export')) {
+      const actions = document.querySelector('.soundtrack-actions');
+      if (actions) {
+        const button = document.createElement('button');
+        button.id = 'spotify-export';
+        button.className = 'spotify-export';
+        button.type = 'button';
+        button.disabled = true;
+        button.innerHTML = '<span class="spotify-dot">●</span> Create Spotify playlist';
+        actions.appendChild(button);
+      }
+    }
+  </script>
+  <script src="./app.js?v=20260905b" defer></script>
 </body>
 </html>
