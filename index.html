@@ -1,159 +1,95 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Landscaping Estimator</title>
-    <link rel="stylesheet" href="app/styles.css" />
-  </head>
-  <body>
-    <header>
-      <h1>Landscaping Estimator & Job Manager</h1>
-      <p>Local-first static prototype (no backend required)</p>
-    </header>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Turn a book into a background reading soundtrack.">
+  <title>ReadSound — Your book, scored</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="ReadSound home">Read<span>Sound</span></a>
+    <span class="tagline">Your book, scored.</span>
+  </header>
 
-    <main>
-      <section class="panel">
-        <h2>Estimate Builder</h2>
-        <div class="grid two">
-          <label>
-            Customer Name
-            <input id="customerName" placeholder="Smith Residence" />
-          </label>
-          <label>
-            Estimate #
-            <input id="estimateNumber" placeholder="EST-1001" />
-          </label>
-          <label>
-            Template
-            <select id="templateSelect"></select>
-          </label>
-          <label>
-            Status
-            <select id="estimateStatus">
-              <option>Draft</option>
-              <option>Accepted</option>
-              <option>Rejected</option>
-              <option>No Response</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="grid two">
-          <label>
-            Payment Link (PayPal/Venmo/Stripe/etc.)
-            <input id="paymentLink" placeholder="https://paypal.me/yourbiz" />
-          </label>
-          <label>
-            Customer Email
-            <input id="customerEmail" placeholder="customer@email.com" />
-          </label>
-        </div>
-
-        <label>
-          Agreement Terms
-          <textarea id="agreementText" rows="4" placeholder="50% deposit required. Balance due upon completion."></textarea>
-        </label>
-
-        <h3>Dimension Entries</h3>
-        <div id="dimensionsList"></div>
-        <button id="addDimensionBtn" type="button">+ Add Bed/Area</button>
-
-        <h3>Template Items</h3>
-        <div id="lineItems"></div>
-
-        <div class="totals">
-          <p>Materials: <strong id="materialsTotal">$0.00</strong></p>
-          <p>Labor: <strong id="laborTotal">$0.00</strong></p>
-          <p>Fees/Equipment: <strong id="feesTotal">$0.00</strong></p>
-          <p class="grand">Estimate Total: <strong id="grandTotal">$0.00</strong></p>
-        </div>
-
-        <div class="actions">
-          <button id="saveEstimateBtn" type="button">Save Estimate</button>
-          <button id="exportBtn" type="button">Print / Export PDF</button>
-          <button id="newEstimateBtn" type="button">New Estimate</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Saved Estimates</h2>
-        <p>Load, duplicate, or delete saved estimates.</p>
-        <ul id="savedEstimates"></ul>
-      </section>
-
-      <section class="panel">
-        <h2>Work Dashboard</h2>
-        <p>Accepted estimates automatically appear here.</p>
-        <ul id="workDashboard"></ul>
-      </section>
-
-      <section class="panel">
-        <h2>Worker Clock</h2>
-        <div class="worker-controls">
-          <button class="big start" data-action="startJob">START JOB</button>
-          <button class="big stop" data-action="stopJob">STOP JOB</button>
-          <button class="big lunch" data-action="startLunch">START LUNCH</button>
-          <button class="big lunch" data-action="endLunch">END LUNCH</button>
-        </div>
-        <label>
-          Worker Name
-          <input id="workerName" placeholder="John" />
-        </label>
-        <label>
-          Current Job
-          <input id="workerJob" placeholder="Mulch Install - Smith Residence" />
-        </label>
-        <h3>Recent Time Logs</h3>
-        <ul id="timeLogs"></ul>
-      </section>
-
-      <section class="panel">
-        <h2>Weekly Pay Tracker</h2>
-        <div class="grid two">
-          <label>
-            Employee
-            <input id="payWorker" placeholder="John Smith" />
-          </label>
-          <label>
-            Hourly Rate
-            <input id="hourlyRate" type="number" min="0" step="0.01" placeholder="20" />
-          </label>
-          <label>
-            Monday Hours
-            <input class="day-hours" data-day="Mon" type="number" min="0" step="0.25" />
-          </label>
-          <label>
-            Tuesday Hours
-            <input class="day-hours" data-day="Tue" type="number" min="0" step="0.25" />
-          </label>
-          <label>
-            Wednesday Hours
-            <input class="day-hours" data-day="Wed" type="number" min="0" step="0.25" />
-          </label>
-          <label>
-            Thursday Hours
-            <input class="day-hours" data-day="Thu" type="number" min="0" step="0.25" />
-          </label>
-          <label>
-            Friday Hours
-            <input class="day-hours" data-day="Fri" type="number" min="0" step="0.25" />
-          </label>
-        </div>
-        <p>Total Hours: <strong id="weeklyHours">0.00</strong></p>
-        <p>Estimated Pay: <strong id="weeklyPay">$0.00</strong></p>
-      </section>
-    </main>
-
-    <template id="dimensionRowTemplate">
-      <div class="dimension-row">
-        <input type="number" min="0" step="0.1" class="length" placeholder="Length (ft)" />
-        <input type="number" min="0" step="0.1" class="width" placeholder="Width (ft)" />
-        <input type="number" min="0" step="0.1" class="depth" placeholder="Depth (in)" />
-        <button class="danger remove-dimension" type="button">Remove</button>
+  <main id="top">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">READING + MUSIC</p>
+        <h1>Find the soundtrack hiding inside your book.</h1>
+        <p class="hero-copy">Pick a book and ReadSound turns its subjects, themes, and metadata into a music discovery session.</p>
       </div>
-    </template>
+      <form id="searchForm" class="search" autocomplete="off">
+        <label for="bookQuery">Find a book</label>
+        <div class="search-row">
+          <input id="bookQuery" name="bookQuery" required minlength="2" placeholder="Try The Hobbit, Dune, or Jane Eyre" />
+          <button type="submit">Search</button>
+        </div>
+      </form>
+    </section>
 
-    <script src="app/app.js"></script>
-  </body>
+    <section id="resultsSection" class="results-section hidden" aria-live="polite">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">BOOKS</p>
+          <h2>Choose your starting point</h2>
+        </div>
+        <span id="resultCount" class="muted"></span>
+      </div>
+      <div id="bookResults" class="book-grid"></div>
+    </section>
+
+    <section id="workspace" class="workspace hidden" aria-live="polite">
+      <aside class="book-card">
+        <div class="cover-wrap">
+          <img id="bookCover" alt="" class="cover">
+        </div>
+        <p class="eyebrow">NOW READING</p>
+        <h2 id="bookTitle"></h2>
+        <p id="bookAuthor" class="author"></p>
+        <p id="bookDescription" class="description"></p>
+        <div id="subjectTags" class="tags"></div>
+        <button id="rebuildButton" class="secondary" type="button">Rebuild soundtrack</button>
+      </aside>
+
+      <section class="player-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SOUNDTRACK</p>
+            <h2 id="playlistTitle">Loading your score…</h2>
+          </div>
+          <button id="shuffleButton" class="icon-button" type="button" title="Shuffle playlist" aria-label="Shuffle playlist">↻</button>
+        </div>
+        <p id="matchExplanation" class="match-explanation"></p>
+
+        <div id="player" class="player hidden">
+          <div class="now-playing">
+            <img id="trackArtwork" alt="" />
+            <div>
+              <p class="eyebrow">NOW PLAYING</p>
+              <h3 id="trackName"></h3>
+              <p id="trackArtist" class="muted"></p>
+            </div>
+          </div>
+          <audio id="audio" controls preload="none"></audio>
+          <div class="player-actions">
+            <button id="prevButton" class="secondary" type="button">← Prev</button>
+            <button id="nextButton" type="button">Next →</button>
+          </div>
+        </div>
+
+        <div id="playlist" class="playlist"></div>
+        <div id="loading" class="loading hidden"><span class="spinner"></span> Building your reading soundtrack…</div>
+        <div id="error" class="error hidden" role="alert"></div>
+      </section>
+    </section>
+  </main>
+
+  <footer>
+    <p>ReadSound uses Open Library for books and Apple's iTunes Search API for music previews.</p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
 </html>

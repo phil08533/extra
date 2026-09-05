@@ -1,48 +1,64 @@
-# Landscaping Estimator & Job Manager
+# ReadSound
 
-This repository contains:
-- A complete product SDLC/specification
-- A runnable static prototype implementing the first working estimator and worker flows
+ReadSound turns a book into a background reading soundtrack. Search Open Library for a book, derive lightweight themes from its metadata, then search the iTunes Search API for matching music previews.
 
-## Core Product Philosophy
+## What this version does
 
-- Free and open source core
-- No required backend for essential functionality
-- Local-first architecture
-- Optional paid cloud sync for advanced workflows
-- Extremely simple worker interface for clock-in/clock-out use
+- Search Open Library by title, author, or subject.
+- Display book cover, title, author, subjects, and description.
+- Build a soundtrack from book metadata without an AI service.
+- Query iTunes for multiple genre/theme searches and de-duplicate tracks.
+- Play 30-second previews in-browser with previous/next controls.
+- Shuffle and rebuild the soundtrack.
+- Keep the current book and playlist in localStorage.
+- Responsive, dependency-free frontend that can run as a static GitHub Pages site.
 
-## Project Layout
+## APIs
 
-- `docs/SDLC.md` — Full software development life cycle and product specification
-- `app/index.html` — Static app shell
-- `app/styles.css` — UI styles
-- `app/app.js` — Estimator, work dashboard, and worker clock logic (localStorage)
+### Open Library
+Used for book discovery and metadata.
 
-## Run the Static App
+`https://openlibrary.org/search.json`
 
-From the repo root:
+### iTunes Search API
+Used for music discovery and preview URLs.
+
+`https://itunes.apple.com/search`
+
+The application uses preview audio only. It does not download or re-host music.
+
+## Run locally
+
+From the repository root:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Then open:
+Open `http://localhost:8000/`.
 
-- `http://localhost:8000/app/`
+## GitHub Pages
 
-## Current Prototype Capabilities
+The app has no build step. Publish the repository root with GitHub Pages, or use any static web host.
 
-- Estimate builder with template-based line items
-- Material auto-calculations from dimensions (mulch, soil, square footage)
-- Estimate agreement text, customer email, and payment link fields
-- Save, load, duplicate, and delete estimates locally
-- Work dashboard showing accepted jobs
-- Worker clock interface with large action buttons
-- Local time log history
-- Weekly pay tracker (hours + hourly rate)
-- Browser print/export flow for estimates
+## Project structure
 
-## Need help merging conflicts?
+```text
+.
+├── index.html
+├── styles.css
+├── app.js
+└── README.md
+```
 
-Use the step-by-step guide in `CONTRIBUTING.md` (rebase flow, ours/theirs shortcuts, and GitHub UI fallback).
+## Design direction
+
+The first release deliberately avoids accounts, databases, paid services, and AI. The interesting part is the matching algorithm: book metadata becomes a set of music-search signals, and the app ranks a mixed playlist from those signals.
+
+## Next ideas
+
+- Track reading progress and vary soundtrack intensity by chapter.
+- Add ambient-only, instrumental-only, and vocal-heavy modes.
+- Let users save named reading sessions locally.
+- Add more open music sources where licensing permits actual streaming.
+- Improve theme scoring using more books and music metadata.
