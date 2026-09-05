@@ -3,33 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="ReadSound creates a reading soundtrack from a book's themes.">
+  <meta name="description" content="ReadSound creates a reading soundtrack from a book's themes and sends it to Spotify.">
+  <meta name="theme-color" content="#173b2f">
   <title>ReadSound — Your book. Your soundtrack.</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <div class="grain" aria-hidden="true"></div>
   <main class="shell">
     <header class="topbar">
-      <a class="brand" href="./">ReadSound</a>
-      <span class="badge">BOOK → MUSIC</span>
+      <a class="brand" href="./" aria-label="ReadSound home"><span class="brand-mark">R</span>ReadSound</a>
+      <div class="top-actions">
+        <span class="badge">BOOK → SOUNDTRACK</span>
+        <button id="spotify-auth" class="spotify-connect" type="button">
+          <span class="spotify-dot">●</span><span id="spotify-auth-label">Connect Spotify</span>
+        </button>
+      </div>
     </header>
 
     <section class="hero">
-      <div>
+      <div class="hero-copy">
         <p class="eyebrow">A soundtrack for the story</p>
         <h1>Find music that<br><em>belongs</em> with your book.</h1>
-        <p class="lede">Search Open Library, pull the book's themes, and turn them into a hand-built reading soundtrack.</p>
+        <p class="lede">ReadSound reads the subjects and tone around a book, then builds a focused soundtrack instead of tossing a random genre at you.</p>
+        <div class="hero-actions">
+          <a class="text-link" href="#search">Start with a book <span>↓</span></a>
+          <span class="hero-micro">No ReadSound account required.</span>
+        </div>
       </div>
-      <div class="hero-note">
-        <span>NO ACCOUNT</span>
-        <span>NO BACKEND</span>
-        <span>BUILT FOR THE BROWSER</span>
+      <div class="book-hero" aria-label="Decorative book illustration" role="img">
+        <div class="book-spine"></div>
+        <div class="book-cover">
+          <div class="book-cover-line small"></div>
+          <div class="book-cover-title">READ<br>SOUND</div>
+          <div class="book-cover-line"></div>
+          <div class="book-cover-meta">TURN THE PAGE.<br>PRESS PLAY.</div>
+        </div>
       </div>
     </section>
 
-    <section class="search-card">
+    <section id="search" class="search-card">
       <form id="search-form" autocomplete="off">
-        <label for="book-search">Search for a book</label>
+        <div class="search-label-row">
+          <label for="book-search">Search for a book</label>
+          <span>Open Library</span>
+        </div>
         <div class="search-row">
           <input id="book-search" name="q" type="search" placeholder="The Hobbit, Dune, Jane Eyre…" required>
           <button type="submit">Find book <span>↗</span></button>
@@ -50,15 +68,21 @@
     </section>
 
     <section id="soundtrack" class="soundtrack" hidden>
-      <div class="section-head">
+      <div class="section-head soundtrack-head">
         <div>
           <p class="eyebrow">Your reading soundtrack</p>
           <h2 id="selected-title">—</h2>
           <p id="selected-meta" class="muted"></p>
         </div>
-        <button id="rebuild" class="ghost" type="button">Rebuild soundtrack ↻</button>
+        <div class="soundtrack-actions">
+          <button id="rebuild" class="ghost" type="button">Rebuild ↻</button>
+          <button id="spotify-export" class="spotify-export" type="button" disabled>
+            <span class="spotify-dot">●</span> Create Spotify playlist
+          </button>
+        </div>
       </div>
 
+      <div class="export-status" id="export-status" aria-live="polite"></div>
       <div class="mood-strip" id="mood-strip"></div>
 
       <div class="player">
@@ -75,12 +99,49 @@
         </div>
       </div>
 
+      <div class="track-heading"><span>Track</span><span>Why it fits</span><span></span></div>
       <div id="tracks" class="tracks"></div>
       <audio id="audio" preload="none"></audio>
-      <p class="attribution">Music discovery and previews provided by iTunes Search. Book data and covers provided by Open Library.</p>
+      <div id="playlist-result" class="playlist-result" hidden></div>
+      <p class="attribution">Book data and covers: Open Library. Music discovery and previews: iTunes Search. Spotify links and playlist export use the Spotify Web API.</p>
     </section>
   </main>
-  <footer class="footer">ReadSound is a client-side GitHub Pages experiment. Book and music services have their own usage rules.</footer>
+
+  <footer class="footer">ReadSound runs entirely in your browser. Your Spotify authorization stays in this browser and is never sent to ReadSound.</footer>
+
+  <dialog id="spotify-modal" class="modal">
+    <form method="dialog" id="spotify-form" class="modal-card">
+      <button class="modal-close" value="cancel" aria-label="Close">×</button>
+      <p class="eyebrow">Connect your music</p>
+      <h2>Send your soundtrack to Spotify.</h2>
+      <p class="modal-copy">ReadSound uses Spotify's browser-safe PKCE login. You only need your Spotify <strong>Client ID</strong>; never paste your Client Secret here.</p>
+      <label for="spotify-client-id">Spotify Client ID</label>
+      <input id="spotify-client-id" type="text" autocomplete="off" spellcheck="false" placeholder="32-character Client ID">
+      <div class="redirect-box">
+        <span>Redirect URI</span>
+        <code id="redirect-uri">—</code>
+      </div>
+      <p class="modal-help">Add that exact URI to your Spotify app's Redirect URIs, then connect.</p>
+      <div class="modal-buttons">
+        <button class="ghost" value="cancel">Cancel</button>
+        <button class="spotify-export" id="spotify-save" value="default" type="submit">Connect Spotify</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="spotify-settings" class="modal">
+    <form method="dialog" class="modal-card">
+      <button class="modal-close" value="cancel" aria-label="Close">×</button>
+      <p class="eyebrow">Spotify connection</p>
+      <h2 id="spotify-user-heading">Spotify connected.</h2>
+      <p class="modal-copy">Your connection is stored only in this browser. Disconnect here to remove the local token and Client ID.</p>
+      <div class="modal-buttons">
+        <button class="ghost" value="cancel">Keep connected</button>
+        <button class="danger" id="spotify-disconnect" value="default" type="submit">Disconnect</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="./app.js" defer></script>
 </body>
 </html>
