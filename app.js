@@ -1,96 +1,59 @@
-const els = {
-  form: document.querySelector('#search-form'), input: document.querySelector('#book-search'), status: document.querySelector('#status'),
-  results: document.querySelector('#results'), grid: document.querySelector('#book-grid'), count: document.querySelector('#result-count'),
-  soundtrack: document.querySelector('#soundtrack'), title: document.querySelector('#selected-title'), meta: document.querySelector('#selected-meta'),
-  moods: document.querySelector('#mood-strip'), tracks: document.querySelector('#tracks'), rebuild: document.querySelector('#rebuild'),
-  audio: document.querySelector('#audio'), play: document.querySelector('#play'), prev: document.querySelector('#prev'), next: document.querySelector('#next'),
-  art: document.querySelector('#now-art'), nowTrack: document.querySelector('#now-track'), nowArtist: document.querySelector('#now-artist')
-};
-
-const state = { book: null, tracks: [], current: -1, musicCache: new Map(), bookCache: new Map() };
-const THEME_TO_GENRES = {
-  fantasy:['soundtrack','classical','world','folk','new age'], adventure:['soundtrack','alternative','rock','electronic'], mystery:['ambient','electronic','jazz','classical'], thriller:['electronic','ambient','alternative','soundtrack'], horror:['soundtrack','metal','ambient','electronic'], romance:['singer/songwriter','pop','jazz','classical'], love:['pop','singer/songwriter','jazz'], war:['soundtrack','classical','alternative','rock'], history:['classical','folk','world','soundtrack'], historical:['classical','folk','world','soundtrack'], mythology:['world','folk','soundtrack','classical'], magic:['new age','soundtrack','electronic','classical'], science:['electronic','ambient','classical'], science_fiction:['electronic','ambient','soundtrack','alternative'], dystopia:['electronic','alternative','ambient','rock'], nature:['new age','folk','ambient','world'], travel:['world','folk','alternative','electronic'], survival:['rock','ambient','soundtrack','alternative'], coming_of_age:['alternative','indie rock','pop','singer/songwriter'], friendship:['indie rock','pop','alternative'], family:['singer/songwriter','pop','classical'], philosophy:['ambient','classical','jazz'], religion:['world','classical','ambient'], politics:['alternative','rock','folk','classical'], crime:['jazz','electronic','soundtrack','hip-hop/rap'], detective:['jazz','soundtrack','ambient'], school:['pop','alternative','indie rock'], humor:['pop','alternative','jazz'], comedy:['pop','jazz','alternative'], literary:['classical','jazz','ambient','singer/songwriter'], poetry:['ambient','classical','jazz','singer/songwriter']
-};
-const FALLBACK_GENRES=['ambient','classical','soundtrack','indie rock'];
-
+const els={form:document.querySelector('#search-form'),input:document.querySelector('#book-search'),status:document.querySelector('#status'),results:document.querySelector('#results'),grid:document.querySelector('#book-grid'),count:document.querySelector('#result-count'),soundtrack:document.querySelector('#soundtrack'),title:document.querySelector('#selected-title'),meta:document.querySelector('#selected-meta'),moods:document.querySelector('#mood-strip'),tracks:document.querySelector('#tracks'),rebuild:document.querySelector('#rebuild'),audio:document.querySelector('#audio'),play:document.querySelector('#play'),prev:document.querySelector('#prev'),next:document.querySelector('#next'),art:document.querySelector('#now-art'),nowTrack:document.querySelector('#now-track'),nowArtist:document.querySelector('#now-artist'),spotifyAuth:document.querySelector('#spotify-auth'),spotifyAuthLabel:document.querySelector('#spotify-auth-label'),spotifyExport:document.querySelector('#spotify-export'),exportStatus:document.querySelector('#export-status'),playlistResult:document.querySelector('#playlist-result'),spotifyModal:document.querySelector('#spotify-modal'),spotifyForm:document.querySelector('#spotify-form'),spotifyClientId:document.querySelector('#spotify-client-id'),redirectUri:document.querySelector('#redirect-uri'),spotifySettings:document.querySelector('#spotify-settings'),spotifyDisconnect:document.querySelector('#spotify-disconnect'),spotifyUserHeading:document.querySelector('#spotify-user-heading')};
+const state={book:null,tracks:[],current:-1,musicCache:new Map(),bookCache:new Map(),spotify:{clientId:localStorage.getItem('readsound.spotify.clientId')||'',accessToken:null,expiresAt:0,user:null}};
+const SPOTIFY_SCOPES='playlist-modify-private playlist-modify-public user-read-private';
+const THEME_RULES={
+ fantasy:['soundtrack','classical','folk','world','new age'],adventure:['soundtrack','alternative','rock','world'],mystery:['jazz','ambient','soundtrack','electronic'],thriller:['electronic','ambient','soundtrack','alternative'],horror:['soundtrack','ambient','metal','dark ambient'],romance:['singer/songwriter','jazz','pop','classical'],love:['singer/songwriter','jazz','pop'],war:['soundtrack','classical','folk','rock'],history:['classical','folk','world','soundtrack'],historical:['classical','folk','world','soundtrack'],mythology:['world','folk','soundtrack','classical'],magic:['new age','soundtrack','electronic','classical'],science:['electronic','ambient','classical'],science_fiction:['electronic','ambient','soundtrack'],dystopia:['electronic','alternative','ambient','industrial'],nature:['ambient','folk','world','new age'],travel:['world','folk','alternative'],survival:['ambient','soundtrack','rock'],coming_of_age:['indie rock','alternative','pop','singer/songwriter'],friendship:['indie rock','pop','alternative'],family:['singer/songwriter','pop','classical'],philosophy:['ambient','classical','jazz'],religion:['world','classical','ambient'],politics:['folk','rock','alternative','classical'],crime:['jazz','soundtrack','electronic','hip-hop/rap'],detective:['jazz','soundtrack','ambient'],school:['indie rock','pop','alternative'],humor:['pop','jazz','alternative'],comedy:['pop','jazz','alternative'],literary:['classical','jazz','ambient','singer/songwriter'],poetry:['ambient','classical','jazz','singer/songwriter'],biography:['folk','singer/songwriter','classical'],memoir:['folk','singer/songwriter','ambient'],psychology:['ambient','classical','jazz'],political:['folk','rock','classical'],family_life:['singer/songwriter','folk','classical']};
+const STOPWORDS=new Set('the a an and or of to in on for with from by into about after before over under this that these those is are was were be been book books novel story stories edition volume part life man woman men women one two three'.split(' '));
+const GENRE_FALLBACK=['ambient','classical','soundtrack'];
+const TITLE_HINTS=[
+  {re:/lord of the rings|hobbit|tolkien|middle earth|dragon|wizard|witch|fairy|fantasy/i,genres:['folk','soundtrack','classical','world'],terms:['fantasy','adventure','magic']},
+  {re:/dune|foundation|neuromancer|mars|robot|galaxy|space|expanse|three-body/i,genres:['electronic','ambient','soundtrack'],terms:['science fiction','space','future']},
+  {re:/sherlock|poirot|murder|detective|mystery|agatha christie/i,genres:['jazz','soundtrack','classical'],terms:['mystery','detective','crime']},
+  {re:/dracula|frankenstein|haunting|horror|carrie|shining|salem/i,genres:['ambient','soundtrack','metal'],terms:['horror','dark']},
+  {re:/pride and prejudice|jane eyre|wuthering|sense and sensibility|romance/i,genres:['classical','jazz','singer/songwriter'],terms:['romance','love','relationship']}
+];
+const GENRE_STOP=new Set(['music','rock','pop','alternative','electronic','classical','ambient','soundtrack','folk','world','jazz','metal','new age','singer/songwriter','indie rock','hip-hop/rap']);
 function setStatus(msg='',error=false){els.status.textContent=msg;els.status.classList.toggle('error',error)}
 function esc(s=''){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function coverUrl(id){return id?`https://covers.openlibrary.org/b/id/${id}-M.jpg`:''}
-
-async function openLibrarySearch(q){
-  const key=q.trim().toLowerCase();if(state.bookCache.has(key))return state.bookCache.get(key);
-  const url=`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&fields=key,title,author_name,first_publish_year,cover_i,subject,subject_key&limit=8`;
-  const res=await fetch(url,{headers:{Accept:'application/json'}});if(!res.ok)throw new Error('Open Library search failed.');
-  const data=await res.json();const docs=(data.docs||[]).filter(x=>x.title);state.bookCache.set(key,docs);return docs;
-}
-
-function renderBooks(books){
-  els.grid.innerHTML='';els.count.textContent=`${books.length} found`;els.results.hidden=false;
-  books.forEach(book=>{const card=document.createElement('article');card.className='book';const btn=document.createElement('button');btn.type='button';
-    const cover=coverUrl(book.cover_i);btn.innerHTML=`<div class="cover">${cover?`<img loading="lazy" src="${cover}" alt="Cover of ${esc(book.title)}">`:`<div class="cover-fallback">${esc(book.title.slice(0,28))}</div>`}</div><div class="book-info"><div class="book-title">${esc(book.title)}</div><div class="book-author">${esc((book.author_name||[]).slice(0,2).join(', '))}</div><div class="book-year">${book.first_publish_year||'Unknown year'}</div></div>`;
-    btn.addEventListener('click',()=>selectBook(book));card.appendChild(btn);els.grid.appendChild(card);
-  });
-}
-
-function bookThemes(book){
-  const raw=[...(book.subject_key||[]),...(book.subject||[])].map(x=>String(x).toLowerCase().replace(/[^a-z0-9_ ]/g,'_'));
-  return [...new Set(raw.map(x=>x.replace(/\s+/g,'_')).filter(Boolean))].slice(0,18);
-}
-
-function chooseGenres(themes,book){
-  const scores=new Map();
-  themes.forEach(theme=>{
-    Object.entries(THEME_TO_GENRES).forEach(([needle,genres])=>{
-      if(theme.includes(needle)) genres.forEach((g,idx)=>scores.set(g,(scores.get(g)||0)+(5-idx)));
-    });
-  });
-  const text=`${book.title} ${(book.author_name||[]).join(' ')}`.toLowerCase();
-  if(/lord|hobbit|tolkien|dragon|wizard/.test(text))['folk','soundtrack','classical'].forEach(g=>scores.set(g,(scores.get(g)||0)+6));
-  if(/dune|foundation|mars|robot|galaxy|space/.test(text))['electronic','ambient','soundtrack'].forEach(g=>scores.set(g,(scores.get(g)||0)+6));
-  const ranked=[...scores.entries()].sort((a,b)=>b[1]-a[1]).map(([g])=>g);return [...new Set([...ranked,...FALLBACK_GENRES])].slice(0,5);
-}
-
-async function iTunesSearch(term){
-  const key=term.toLowerCase();if(state.musicCache.has(key))return state.musicCache.get(key);
-  const params=new URLSearchParams({term,media:'music',entity:'song',country:'US',limit:'20',explicit:'No'});
-  const res=await fetch(`https://itunes.apple.com/search?${params.toString()}`);if(!res.ok)throw new Error('Music search failed.');
-  const data=await res.json();const tracks=(data.results||[]).filter(t=>t.previewUrl&&t.trackName&&t.artistName);state.musicCache.set(key,tracks);return tracks;
-}
-
-function scoreTrack(track,themes,genres){
-  const hay=`${track.trackName} ${track.artistName} ${track.collectionName} ${track.primaryGenreName}`.toLowerCase();let score=0;
-  themes.forEach(t=>t.replace(/_/g,' ').split(' ').filter(x=>x.length>3).forEach(p=>{if(hay.includes(p))score+=2}));
-  const pg=(track.primaryGenreName||'').toLowerCase();genres.forEach((g,i)=>{if(pg.includes(g)||g.includes(pg))score+=Math.max(1,5-i)});
-  if(/instrumental|ambient|soundtrack|classical|folk/.test(pg))score+=1;return score;
-}
-
-async function buildSoundtrack(book){
-  setStatus('Building your soundtrack…');const themes=bookThemes(book);const genres=chooseGenres(themes,book);
-  // Keep the client-side request budget small: five bounded iTunes searches per book.
-  const queries=[book.title,...genres.slice(0,4)];const buckets=await Promise.all(queries.map(q=>iTunesSearch(q).catch(()=>[])));
-  const unique=new Map();buckets.flat().forEach(t=>{if(!unique.has(t.trackId))unique.set(t.trackId,t)});
-  let tracks=[...unique.values()].map(t=>({...t,score:scoreTrack(t,themes,genres)})).sort((a,b)=>b.score-a.score).slice(0,14);
-  if(!tracks.length)throw new Error('No music previews came back. Try another book.');
-  state.book=book;state.tracks=tracks;state.current=-1;
-  els.title.textContent=book.title;els.meta.textContent=`${(book.author_name||[]).slice(0,2).join(', ')||'Unknown author'} · ${book.first_publish_year||'year unknown'}`;
-  els.moods.innerHTML=(themes.length?themes.slice(0,8):['story']).map(t=>`<span class="mood">${esc(t.replace(/_/g,' '))}</span>`).join('');renderTracks();els.soundtrack.hidden=false;els.soundtrack.scrollIntoView({behavior:'smooth',block:'start'});setStatus('');
-}
-
-function renderTracks(){
-  els.tracks.innerHTML=state.tracks.map((t,i)=>`<div class="track ${i===state.current?'playing':''}" data-i="${i}"><div class="track-num">${String(i+1).padStart(2,'0')}</div><div class="track-copy"><div class="track-title">${esc(t.trackName)}</div><div class="track-artist">${esc(t.artistName)} · ${esc(t.primaryGenreName||'music')}</div></div><button class="track-play" type="button">Preview</button></div>`).join('');
-  els.tracks.querySelectorAll('.track').forEach(row=>row.querySelector('button').addEventListener('click',()=>playIndex(Number(row.dataset.i))));
-}
-function updatePlayer(){
-  const t=state.tracks[state.current];if(!t){els.nowTrack.textContent='Choose a track';els.nowArtist.textContent='30-second sample';els.art.textContent='♪';return}
-  els.nowTrack.textContent=t.trackName;els.nowArtist.textContent=t.artistName;els.art.innerHTML=t.artworkUrl100?`<img src="${t.artworkUrl100}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`:'♪';renderTracks();
-}
+function normalizeWords(text=''){return text.toLowerCase().replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(w=>w.length>2&&!STOPWORDS.has(w))}
+function bookThemes(book){const raw=[...(book.subject_key||[]),...(book.subject||[])].map(x=>String(x).toLowerCase().replace(/[^a-z0-9_ ]/g,'_')).map(x=>x.replace(/\s+/g,'_')).filter(Boolean);const strong=raw.filter(x=>!['fiction','literature','general','accessible_book','protected_da_content'].includes(x));return [...new Set(strong)].slice(0,24)}
+function themeTerms(themes){return [...new Set(themes.flatMap(t=>t.replace(/_/g,' ').split(/\s+/)).filter(w=>w.length>3&&!STOPWORDS.has(w)))]}
+function chooseProfile(book,themes){const scores=new Map();const terms=themeTerms(themes);for(const theme of themes){for(const [needle,genres] of Object.entries(THEME_RULES)){if(theme.includes(needle))genres.forEach((g,i)=>scores.set(g,(scores.get(g)||0)+(7-i*1.2)))}}
+ const title=`${book.title} ${(book.author_name||[]).join(' ')}`;for(const hint of TITLE_HINTS){if(hint.re.test(title)){hint.genres.forEach((g,i)=>scores.set(g,(scores.get(g)||0)+(10-i)));terms.push(...hint.terms)}}
+ const ranked=[...scores.entries()].sort((a,b)=>b[1]-a[1]).map(([g])=>g);const genres=[...new Set([...ranked,...GENRE_FALLBACK])].slice(0,4);return {terms:[...new Set(terms)].slice(0,18),genres}}
+async function openLibrarySearch(q){const key=q.trim().toLowerCase();if(state.bookCache.has(key))return state.bookCache.get(key);const url=`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&fields=key,title,author_name,first_publish_year,cover_i,subject,subject_key&limit=8`;const res=await fetch(url,{headers:{Accept:'application/json'}});if(!res.ok)throw new Error('Open Library search failed.');const data=await res.json();const docs=(data.docs||[]).filter(x=>x.title);state.bookCache.set(key,docs);return docs}
+function renderBooks(books){els.grid.innerHTML='';els.count.textContent=`${books.length} found`;els.results.hidden=false;books.forEach(book=>{const card=document.createElement('article');card.className='book';const btn=document.createElement('button');btn.type='button';const cover=coverUrl(book.cover_i);btn.innerHTML=`<div class="cover">${cover?`<img loading="lazy" src="${cover}" alt="Cover of ${esc(book.title)}">`:`<div class="cover-fallback">${esc(book.title.slice(0,28))}</div>`}</div><div class="book-info"><div class="book-title">${esc(book.title)}</div><div class="book-author">${esc((book.author_name||[]).slice(0,2).join(', '))}</div><div class="book-year">${book.first_publish_year||'Unknown year'}</div></div>`;btn.addEventListener('click',()=>selectBook(book));card.appendChild(btn);els.grid.appendChild(card)})}
+async function iTunesSearch(term){const key=term.toLowerCase();if(state.musicCache.has(key))return state.musicCache.get(key);const params=new URLSearchParams({term,media:'music',entity:'song',country:'US',limit:'25',explicit:'No'});const res=await fetch(`https://itunes.apple.com/search?${params}`);if(!res.ok)throw new Error('Music search failed.');const data=await res.json();const tracks=(data.results||[]).filter(t=>t.previewUrl&&t.trackName&&t.artistName);state.musicCache.set(key,tracks);return tracks}
+function scoreTrack(track,profile){const title=`${track.trackName||''} ${track.collectionName||''}`.toLowerCase();const artist=(track.artistName||'').toLowerCase();const genre=(track.primaryGenreName||'').toLowerCase();let score=0;profile.terms.forEach(term=>{const t=term.toLowerCase();if(title.includes(t))score+=14;if(artist.includes(t))score+=5;if(genre.includes(t))score+=4});profile.genres.forEach((g,i)=>{if(genre===g||genre.includes(g)||g.includes(genre))score+=Math.max(1,9-i*2)});
+ if(/soundtrack|classical|ambient|folk|world|jazz/i.test(genre))score+=2;
+ if(GENRE_STOP.has(genre)&&!profile.genres.includes(genre))score-=2;
+ if(/karaoke|tribute|cover version|greatest hits|remix|instrumental version|live version/i.test(title))score-=7;
+ if(/christmas|holiday/i.test(title)&&!profile.terms.some(t=>/christmas|holiday/.test(t)))score-=20;
+ return score}
+function explainTrack(track,profile){const genre=(track.primaryGenreName||'music').toLowerCase();const matched=profile.terms.find(t=>`${track.trackName} ${track.collectionName} ${track.artistName}`.toLowerCase().includes(t.toLowerCase()));if(matched)return `theme: ${matched.replace(/_/g,' ')}`;const genreMatch=profile.genres.find(g=>genre.includes(g)||g.includes(genre));return genreMatch?`mood: ${genreMatch}`:'overall atmosphere'}
+async function buildSoundtrack(book){setStatus('Reading the book’s themes…');const themes=bookThemes(book);const profile=chooseProfile(book,themes);const queryTerms=[book.title,...profile.genres.map(g=>`${profile.terms.slice(0,2).join(' ')} ${g}`)];const queries=[...new Set(queryTerms)].slice(0,4);setStatus('Finding music that fits…');const buckets=await Promise.all(queries.map(q=>iTunesSearch(q).catch(()=>[])));const unique=new Map();buckets.flat().forEach(t=>{if(!unique.has(t.trackId))unique.set(t.trackId,t)});let tracks=[...unique.values()].map(t=>({...t,score:scoreTrack(t,profile),reason:explainTrack(t,profile)})).sort((a,b)=>b.score-a.score);
+ const threshold=tracks.length?Math.max(2,tracks[0].score-9):0;tracks=tracks.filter(t=>t.score>=threshold).slice(0,14);
+ if(!tracks.length)throw new Error('No strong music matches came back. Try another book.');state.book=book;state.tracks=tracks;state.current=-1;els.title.textContent=book.title;els.meta.textContent=`${(book.author_name||[]).slice(0,2).join(', ')||'Unknown author'} · ${book.first_publish_year||'year unknown'}`;els.moods.innerHTML=(themes.length?themes.filter(t=>!GENRE_STOP.has(t)).slice(0,8):['story']).map(t=>`<span class="mood">${esc(t.replace(/_/g,' '))}</span>`).join('');els.spotifyExport.disabled=!spotifyReady();els.playlistResult.hidden=true;renderTracks();els.soundtrack.hidden=false;els.soundtrack.scrollIntoView({behavior:'smooth',block:'start'});setStatus('')}
+function renderTracks(){els.tracks.innerHTML=state.tracks.map((t,i)=>`<div class="track ${i===state.current?'playing':''}" data-i="${i}"><div class="track-num">${String(i+1).padStart(2,'0')}</div><div class="track-copy"><div class="track-title">${esc(t.trackName)}</div><div class="track-artist">${esc(t.artistName)} · ${esc(t.primaryGenreName||'music')}</div></div><div class="track-score">${esc(t.reason)}</div><button class="track-play" type="button">Preview</button></div>`).join('');els.tracks.querySelectorAll('.track').forEach(row=>row.querySelector('button').addEventListener('click',()=>playIndex(Number(row.dataset.i))))}
+function updatePlayer(){const t=state.tracks[state.current];if(!t){els.nowTrack.textContent='Choose a track';els.nowArtist.textContent='30-second sample';els.art.textContent='♪';return}els.nowTrack.textContent=t.trackName;els.nowArtist.textContent=t.artistName;els.art.innerHTML=t.artworkUrl100?`<img src="${t.artworkUrl100}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`:'♪';renderTracks()}
 function playIndex(i){const t=state.tracks[i];if(!t)return;state.current=i;els.audio.src=t.previewUrl;els.audio.play().catch(()=>{});els.play.textContent='❚❚';updatePlayer()}
-function pause(){els.audio.pause();els.play.textContent='▶'}
-function nextTrack(){if(state.tracks.length)playIndex((state.current+1)%state.tracks.length)}
+function pause(){els.audio.pause();els.play.textContent='▶'}function nextTrack(){if(state.tracks.length)playIndex((state.current+1)%state.tracks.length)}
 function selectBook(book){buildSoundtrack(book).catch(err=>setStatus(err.message||'Could not build soundtrack.',true))}
-
-els.audio.addEventListener('ended',nextTrack);els.play.addEventListener('click',()=>{if(!state.tracks.length)return;if(els.audio.paused)playIndex(state.current>=0?state.current:0);else pause()});
-els.next.addEventListener('click',nextTrack);els.prev.addEventListener('click',()=>{if(state.tracks.length)playIndex((state.current-1+state.tracks.length)%state.tracks.length)});
-els.form.addEventListener('submit',async e=>{e.preventDefault();const q=els.input.value.trim();if(!q)return;setStatus('Searching Open Library…');els.results.hidden=true;els.soundtrack.hidden=true;try{const books=await openLibrarySearch(q);if(!books.length)throw new Error('No books found.');renderBooks(books);setStatus('')}catch(err){setStatus(err.message||'Something went wrong.',true)}});
-els.rebuild.addEventListener('click',()=>state.book&&buildSoundtrack(state.book).catch(err=>setStatus(err.message||'Could not rebuild soundtrack.',true)));
-if(location.hash.length>1)els.input.value=decodeURIComponent(location.hash.slice(1)).replace(/\+/g,' ');
+function redirectUri(){return `${location.origin}${location.pathname}`}
+function base64Url(bytes){let str='';bytes.forEach(b=>str+=String.fromCharCode(b));return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function randomString(length=64){const bytes=new Uint8Array(length);crypto.getRandomValues(bytes);return base64Url(bytes)}
+async function sha256(value){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))}
+function spotifyReady(){return Boolean(state.spotify.clientId)}
+function spotifyTokenValid(){return Boolean(state.spotify.accessToken&&Date.now()<state.spotify.expiresAt-60000)}
+function saveSpotifyState(){localStorage.setItem('readsound.spotify.clientId',state.spotify.clientId)}
+function openSpotifyAuth(){if(!state.spotify.clientId){els.redirectUri.textContent=redirectUri();els.spotifyClientId.value=state.spotify.clientId;els.spotifyModal.showModal();return}if(state.spotify.user){els.spotifyUserHeading.textContent=`Connected as ${state.spotify.user.display_name||state.spotify.user.id}`;els.spotifySettings.showModal();return}beginSpotifyLogin()}
+async function beginSpotifyLogin(){const verifier=randomString(64);const challenge=base64Url(new Uint8Array(await sha256(verifier)));sessionStorage.setItem('readsound.spotify.verifier',verifier);const params=new URLSearchParams({client_id:state.spotify.clientId,response_type:'code',redirect_uri:redirectUri(),scope:SPOTIFY_SCOPES,code_challenge_method:'S256',code_challenge:challenge});location.href=`https://accounts.spotify.com/authorize?${params}`}
+async function exchangeSpotifyCode(code){const verifier=sessionStorage.getItem('readsound.spotify.verifier');if(!verifier)throw new Error('Spotify login session expired. Please connect again.');const body=new URLSearchParams({client_id:state.spotify.clientId,grant_type:'authorization_code',code,redirect_uri:redirectUri(),code_verifier:verifier});const res=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});const data=await res.json();if(!res.ok)throw new Error(data.error_description||'Spotify authorization failed.');state.spotify.accessToken=data.access_token;state.spotify.expiresAt=Date.now()+data.expires_in*1000;sessionStorage.removeItem('readsound.spotify.verifier');await loadSpotifyUser();els.spotifyExport.disabled=!state.tracks.length;updateSpotifyButton()}
+async function spotifyFetch(path,options={}){if(!spotifyTokenValid())throw new Error('Spotify session expired. Connect again.');const res=await fetch(`https://api.spotify.com/v1${path}`,{...options,headers:{Authorization:`Bearer ${state.spotify.accessToken}`,...(options.headers||{})}});if(!res.ok){let data={};try{data=await res.json()}catch{}throw new Error(data.error?.message||`Spotify request failed (${res.status}).`)}return res.status===204?null:res.json()}
+async function loadSpotifyUser(){state.spotify.user=await spotifyFetch('/me')}
+function updateSpotifyButton(){const connected=Boolean(state.spotify.user);els.spotifyAuth.classList.toggle('connected',connected);els.spotifyAuthLabel.textContent=connected?`Spotify · ${state.spotify.user.display_name||'Connected'}`:'Connect Spotify';els.spotifyExport.disabled=!connected||!state.tracks.length}
+async function createSpotifyPlaylist(){if(!state.tracks.length)return;if(!state.spotify.user){openSpotifyAuth();return}els.exportStatus.textContent='Creating your playlist…';els.spotifyExport.disabled=true;try{const name=`ReadSound — ${state.book.title}`.slice(0,100);const description=`A reading soundtrack for ${state.book.title}, built by ReadSound.`;const playlist=await spotifyFetch(`/users/${encodeURIComponent(state.spotify.user.id)}/playlists`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,public:false,collaborative:false,description})});const uris=[];for(const track of state.tracks){const query=new URLSearchParams({q:`track:${track.trackName} artist:${track.artistName}`,type:'track',limit:'3'});const found=await spotifyFetch(`/search?${query}`);const exact=(found.tracks?.items||[]).find(x=>x.name.toLowerCase()===track.trackName.toLowerCase()&&(x.artists||[]).some(a=>a.name.toLowerCase()===track.artistName.toLowerCase()))||(found.tracks?.items||[])[0];if(exact?.uri)uris.push(exact.uri)}if(uris.length)for(let i=0;i<uris.length;i+=100)await spotifyFetch(`/playlists/${playlist.id}/items`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:uris.slice(i,i+100)})});els.playlistResult.innerHTML=`<strong>${uris.length} tracks sent to Spotify.</strong><span> Your playlist is ready.</span><br><a href="${esc(playlist.external_urls.spotify)}" target="_blank" rel="noopener">Open playlist in Spotify ↗</a>`;els.playlistResult.hidden=false;els.exportStatus.textContent=uris.length?`Playlist created with ${uris.length} matching tracks.`:'Playlist created, but Spotify did not find matching tracks.'}catch(err){els.exportStatus.textContent=err.message||'Could not create the Spotify playlist.'}finally{els.spotifyExport.disabled=false}}
+function disconnectSpotify(){state.spotify.clientId='';state.spotify.accessToken=null;state.spotify.expiresAt=0;state.spotify.user=null;localStorage.removeItem('readsound.spotify.clientId');sessionStorage.removeItem('readsound.spotify.verifier');updateSpotifyButton();els.spotifyExport.disabled=true}
+async function handleSpotifyCallback(){const params=new URLSearchParams(location.search);const code=params.get('code');const error=params.get('error');if(!code&&!error)return;history.replaceState({},document.title,location.pathname+location.hash);if(error){setStatus(`Spotify login cancelled: ${error}.`,true);return}if(!state.spotify.clientId){setStatus('Spotify Client ID is missing. Connect Spotify again.',true);return}try{setStatus('Finishing Spotify connection…');await exchangeSpotifyCode(code);setStatus('Spotify connected.');if(state.book)els.spotifyExport.disabled=false}catch(err){setStatus(err.message||'Spotify connection failed.',true)}}
+els.audio.addEventListener('ended',nextTrack);els.play.addEventListener('click',()=>{if(!state.tracks.length)return;if(els.audio.paused)playIndex(state.current>=0?state.current:0);else pause()});els.next.addEventListener('click',nextTrack);els.prev.addEventListener('click',()=>{if(state.tracks.length)playIndex((state.current-1+state.tracks.length)%state.tracks.length)});els.form.addEventListener('submit',async e=>{e.preventDefault();const q=els.input.value.trim();if(!q)return;setStatus('Searching Open Library…');els.results.hidden=true;els.soundtrack.hidden=true;try{const books=await openLibrarySearch(q);if(!books.length)throw new Error('No books found.');renderBooks(books);setStatus('')}catch(err){setStatus(err.message||'Something went wrong.',true)}});els.rebuild.addEventListener('click',()=>state.book&&buildSoundtrack(state.book).catch(err=>setStatus(err.message||'Could not rebuild soundtrack.',true)));els.spotifyAuth.addEventListener('click',openSpotifyAuth);els.spotifyExport.addEventListener('click',createSpotifyPlaylist);els.spotifyDisconnect.addEventListener('click',disconnectSpotify);els.spotifyForm.addEventListener('submit',e=>{e.preventDefault();const id=els.spotifyClientId.value.trim();if(!/^[a-zA-Z0-9]{20,}$/.test(id)){setStatus('Enter a valid Spotify Client ID.',true);return}state.spotify.clientId=id;saveSpotifyState();els.spotifyModal.close();beginSpotifyLogin().catch(err=>setStatus(err.message||'Could not start Spotify login.',true))});els.redirectUri.textContent=redirectUri();updateSpotifyButton();handleSpotifyCallback();if(location.hash.length>1)els.input.value=decodeURIComponent(location.hash.slice(1)).replace(/\+/g,' ');
