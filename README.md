@@ -1,25 +1,28 @@
 # ReadSound
 
-ReadSound is a static GitHub Pages app that turns a book into a focused reading soundtrack and opens the soundtrack in YouTube without requiring the visitor to log in.
+ReadSound is a static GitHub Pages app that turns a book into a focused **instrumental** reading soundtrack and opens the soundtrack in YouTube without requiring the visitor to log in.
 
 ## What it does
 
 1. Searches Open Library for a book.
-2. Extracts the book's subjects plus title-specific hints.
-3. Builds a small theme/genre profile instead of relying on one generic genre.
-4. Searches iTunes for music previews and scores tracks against those themes.
-5. Penalizes weak matches such as unrelated genres, generic covers/remixes, and seasonal tracks that do not fit the book.
-6. Lets you preview the resulting soundtrack in the browser.
-7. Searches YouTube for matching videos using a browser-restricted API key.
-8. Opens all matched YouTube videos as a no-login multi-video queue/temporary playlist.
+2. Extracts meaningful book subjects while stripping bibliographic noise such as nationality, century, literature, and criticism labels.
+3. Adds title-specific story hints for things such as fantasy, science fiction, mystery, horror, and classic romance.
+4. Searches iTunes for music previews using several targeted instrumental queries.
+5. Scores tracks against the book's themes and musical profile, while strongly penalizing vocal, karaoke, cover, remix, live, and holiday results.
+6. Builds a fuller soundtrack of up to 12 tracks instead of stopping after only a few weak matches.
+7. Lets you preview the resulting soundtrack in the browser.
+8. Searches YouTube for the matched instrumental tracks using a browser-restricted API key when configured.
+9. Opens the matched YouTube video IDs as a no-login multi-video queue/temporary playlist.
 
 There is no ReadSound account, Spotify integration, Google login, or ReadSound backend.
 
 ## YouTube export without visitor login
 
-A normal saved YouTube playlist belongs to a user's YouTube account, and the official YouTube Data API requires OAuth for playlist creation and playlist-item insertion. ReadSound deliberately avoids that login flow. Instead, it uses the YouTube Data API only for public video search, then opens the selected video IDs through YouTube's multi-video `watch_videos` queue URL. The visitor can use the queue immediately and can save it in YouTube themselves if desired.
+A normal saved YouTube playlist belongs to a user's YouTube account, and the official YouTube Data API requires OAuth for playlist creation and playlist-item insertion. ReadSound deliberately avoids that login flow. Instead, it uses the YouTube Data API only for public video search, then opens the selected video IDs through YouTube's multi-video queue URL. The visitor can use the queue immediately and can save it in YouTube themselves if desired.
 
 The only developer setup is a YouTube Data API v3 browser key stored in `config.js`. This is not a user credential. Restrict the key to your GitHub Pages origin and to the YouTube Data API v3 in Google Cloud Console.
+
+If the key is not configured, the button now still works: ReadSound opens a normal YouTube search containing several of the selected instrumental tracks instead of silently doing nothing.
 
 ## YouTube API key setup
 
@@ -37,17 +40,15 @@ Set GitHub Pages to deploy from the `main` branch and the repository root (`/`).
 
 ## Music matching
 
-The matcher is intentionally conservative. It combines Open Library subjects with title/author hints, searches several targeted queries, scores theme/genre overlap, and drops low-scoring results. This is still heuristic matching rather than AI, so unusual books may need a rebuild or may produce fewer tracks.
+The matcher is heuristic rather than AI, but it now favors instrumental music by querying for instrumental terms and scoring piano, orchestral, score, soundtrack, ambient, acoustic, strings, and classical signals. It penalizes explicit vocal/lyric/singer/choir/rap indicators and common low-quality variants. It uses several fallback instrumental queries so a book is much less likely to end with only a couple of tracks.
 
-YouTube matching scores title/artist agreement and prefers official audio, official videos, lyrics, Topic/VEVO-style uploads, and plain audio while penalizing karaoke, tribute, covers, nightcore, slowed/sped-up versions, reaction videos, remixes, concerts, and long-form compilation videos.
+YouTube matching scores title/artist agreement and prefers official audio, audio, instrumental, soundtrack/score, Topic/VEVO-style uploads, while penalizing lyrics, vocals, karaoke, tribute, covers, nightcore, slowed/sped-up versions, reaction videos, remixes, concerts, and long-form compilations.
 
 ## APIs and services
 
-ReadSound uses the Open Library Search API for book data/covers and the iTunes Search API for music discovery and previews. Open Library asks applications to keep requests low-volume and cache where possible. The app keeps requests user-driven and bounded.
+ReadSound uses the Open Library Search API for book data/covers, the iTunes Search API for music discovery and previews, and the YouTube Data API for public video search.
 
-Apple documents the iTunes Search API as a web search service and exposes 30-second preview URLs for tracks. Preview usage is subject to Apple's promotional-content terms.
-
-The YouTube Data API permits unauthenticated public search when a valid API key is supplied, but playlist insertion requires OAuth. ReadSound intentionally uses the public-search portion only, then uses YouTube's multi-video queue URL so the visitor does not have to grant account access. This queue workaround is not the same thing as creating a saved playlist in the visitor's account.
+The YouTube Data API's `search.list` endpoint supports video-only searches and filters such as music category and embeddability. Each `search.list` call costs one unit and current default quotas include 100 search calls per day, so ReadSound keeps YouTube matching to one small search per soundtrack track. citeturn119096search0turn119096search2
 
 ## Privacy
 
@@ -62,7 +63,7 @@ The YouTube Data API permits unauthenticated public search when a valid API key 
 
 - Chapter-aware soundtrack progression
 - Reading timer / session mode
-- Better mood weighting and manual genre controls
+- Manual mood weighting and genre controls
 - Optional saved local bookshelves
 - PWA/offline shell
 - Optional server-side YouTube integration for users who want permanent saved playlists
