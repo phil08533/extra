@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="ReadSound creates a reading soundtrack from a book's themes and opens it as a YouTube playlist without requiring a login.">
+  <meta name="description" content="ReadSound creates an instrumental reading soundtrack from a book's themes and opens the matching music on YouTube without requiring a login.">
   <meta name="theme-color" content="#173b2f">
   <title>ReadSound — Your book. Your soundtrack.</title>
-  <link rel="stylesheet" href="./styles.css?v=20260906a">
+  <link rel="stylesheet" href="./styles.css?v=20260906d">
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -15,27 +15,21 @@
       <a class="brand" href="./" aria-label="ReadSound home"><span class="brand-mark">R</span>ReadSound</a>
       <div class="top-actions"><span class="badge">BOOK → SOUNDTRACK</span><span class="no-login-badge">NO LOGIN</span></div>
     </header>
-
     <section class="hero">
-      <div class="hero-copy"><p class="eyebrow">A soundtrack for the story</p><h1>Find music that<br><em>belongs</em> with your book.</h1><p class="lede">ReadSound reads the subjects and tone around a book, then builds a focused soundtrack instead of tossing a random genre at you.</p><div class="hero-actions"><a class="text-link" href="#search">Start with a book <span>↓</span></a><span class="hero-micro">No ReadSound account. No music-service login.</span></div></div>
+      <div class="hero-copy"><p class="eyebrow">A soundtrack for the story</p><h1>Find music that<br><em>belongs</em> with your book.</h1><p class="lede">ReadSound reads the subjects and tone around a book, then builds a focused <strong>instrumental</strong> soundtrack instead of tossing a random genre at you.</p><div class="hero-actions"><a class="text-link" href="#search">Start with a book <span>↓</span></a><span class="hero-micro">No ReadSound account. No music-service login.</span></div></div>
       <div class="book-hero" aria-label="Decorative book illustration" role="img"><div class="book-spine"></div><div class="book-cover"><div class="book-cover-line small"></div><div class="book-cover-title">READ<br>SOUND</div><div class="book-cover-line"></div><div class="book-cover-meta">TURN THE PAGE.<br>PRESS PLAY.</div></div></div>
     </section>
-
-    <section id="search" class="search-card">
-      <form id="search-form" autocomplete="off"><div class="search-label-row"><label for="book-search">Search for a book</label><span>Open Library</span></div><div class="search-row"><input id="book-search" name="q" type="search" placeholder="The Hobbit, Dune, Jane Eyre…" required><button type="submit">Find book <span>↗</span></button></div></form><div id="status" class="status" aria-live="polite"></div>
-    </section>
-
+    <section id="search" class="search-card"><form id="search-form" autocomplete="off"><div class="search-label-row"><label for="book-search">Search for a book</label><span>Open Library</span></div><div class="search-row"><input id="book-search" name="q" type="search" placeholder="The Hobbit, Dune, Jane Eyre…" required><button type="submit">Find book <span>↗</span></button></div></form><div id="status" class="status" aria-live="polite"></div></section>
     <section id="results" class="results" hidden><div class="section-head"><div><p class="eyebrow">Choose your edition</p><h2>Books</h2></div><span id="result-count" class="muted"></span></div><div id="book-grid" class="book-grid"></div></section>
-
     <section id="soundtrack" class="soundtrack" hidden>
-      <div class="section-head soundtrack-head"><div><p class="eyebrow">Your reading soundtrack</p><h2 id="selected-title">—</h2><p id="selected-meta" class="muted"></p></div><div class="soundtrack-actions"><button id="rebuild" class="ghost" type="button">Rebuild ↻</button><button id="youtube-export" class="youtube-export" type="button" disabled><span class="youtube-play">▶</span> Open YouTube playlist</button></div></div>
+      <div class="section-head soundtrack-head"><div><p class="eyebrow">Your instrumental reading soundtrack</p><h2 id="selected-title">—</h2><p id="selected-meta" class="muted"></p></div><div class="soundtrack-actions"><button id="rebuild" class="ghost" type="button">Rebuild ↻</button><button id="youtube-export" class="youtube-export" type="button" disabled><span class="youtube-play">▶</span> Open YouTube queue</button></div></div>
       <div class="export-status" id="export-status" aria-live="polite"></div><div class="mood-strip" id="mood-strip"></div>
-      <div class="player"><div class="now-art" id="now-art">♪</div><div class="now-info"><span class="now-label">NOW PREVIEWING</span><strong id="now-track">Choose a track</strong><span id="now-artist">30-second sample</span></div><div class="player-controls"><button id="prev" class="icon-btn" type="button" aria-label="Previous track">‹</button><button id="play" class="play-btn" type="button" aria-label="Play preview">▶</button><button id="next" class="icon-btn" type="button" aria-label="Next track">›</button></div></div>
-      <div class="track-heading"><span>Track</span><span>Why it fits</span><span></span></div><div id="tracks" class="tracks"></div><audio id="audio" preload="none"></audio><div id="playlist-result" class="playlist-result" hidden></div><p class="attribution">Book data and covers: Open Library. Music discovery and 30-second previews: iTunes Search. YouTube matching uses the YouTube Data API for public search and opens a no-login YouTube queue.</p>
+      <div class="player"><div class="now-art" id="now-art">♪</div><div class="now-info"><span class="now-label">NOW PREVIEWING · INSTRUMENTAL</span><strong id="now-track">Choose a track</strong><span id="now-artist">30-second sample</span></div><div class="player-controls"><button id="prev" class="icon-btn" type="button" aria-label="Previous track">‹</button><button id="play" class="play-btn" type="button" aria-label="Play preview">▶</button><button id="next" class="icon-btn" type="button" aria-label="Next track">›</button></div></div>
+      <div class="track-heading"><span>Track</span><span>Why it fits</span><span></span></div><div id="tracks" class="tracks"></div><audio id="audio" preload="none"></audio><div id="playlist-result" class="playlist-result" hidden></div><p class="attribution">Book data and covers: Open Library. Music discovery and 30-second previews: iTunes Search. YouTube matching uses public search and does not require a visitor login.</p>
     </section>
   </main>
   <footer class="footer">ReadSound runs entirely in your browser. Nothing here requires a ReadSound account or a Spotify/YouTube sign-in.</footer>
-  <script src="./config.js?v=20260906a"></script>
-  <script src="./app.js?v=20260906c" defer></script>
+  <script src="./config.js?v=20260906b"></script>
+  <script src="./app.js?v=20260906d" defer></script>
 </body>
 </html>
