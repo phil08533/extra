@@ -31,10 +31,11 @@
       <div class="section-head soundtrack-head"><div><p class="eyebrow">Your reading soundtrack</p><h2 id="selected-title">—</h2><p id="selected-meta" class="muted"></p></div><div class="soundtrack-actions"><button id="rebuild" class="ghost" type="button">Rebuild ↻</button><button id="youtube-export" class="youtube-export" type="button" disabled><span class="youtube-play">▶</span> Open YouTube playlist</button></div></div>
       <div class="export-status" id="export-status" aria-live="polite"></div><div class="mood-strip" id="mood-strip"></div>
       <div class="player"><div class="now-art" id="now-art">♪</div><div class="now-info"><span class="now-label">NOW PREVIEWING</span><strong id="now-track">Choose a track</strong><span id="now-artist">30-second sample</span></div><div class="player-controls"><button id="prev" class="icon-btn" type="button" aria-label="Previous track">‹</button><button id="play" class="play-btn" type="button" aria-label="Play preview">▶</button><button id="next" class="icon-btn" type="button" aria-label="Next track">›</button></div></div>
-      <div class="track-heading"><span>Track</span><span>Why it fits</span><span></span></div><div id="tracks" class="tracks"></div><audio id="audio" preload="none"></audio><div id="playlist-result" class="playlist-result" hidden></div><p class="attribution">Book data and covers: Open Library. Music discovery and 30-second previews: iTunes Search. YouTube matching uses public search endpoints and opens a no-login YouTube queue.</p>
+      <div class="track-heading"><span>Track</span><span>Why it fits</span><span></span></div><div id="tracks" class="tracks"></div><audio id="audio" preload="none"></audio><div id="playlist-result" class="playlist-result" hidden></div><p class="attribution">Book data and covers: Open Library. Music discovery and 30-second previews: iTunes Search. YouTube matching uses the YouTube Data API for public search and opens a no-login YouTube queue.</p>
     </section>
   </main>
   <footer class="footer">ReadSound runs entirely in your browser. Nothing here requires a ReadSound account or a Spotify/YouTube sign-in.</footer>
-  <script src="./app.js?v=20260906b" defer></script>
+  <script src="./config.js?v=20260906a"></script>
+  <script src="./app.js?v=20260906c" defer></script>
 </body>
 </html>
